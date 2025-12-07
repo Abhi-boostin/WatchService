@@ -5,6 +5,8 @@ import LoginPage from './pages/LoginPage';
 import MainLayout from './components/layout/MainLayout';
 import DashboardPage from './pages/DashboardPage';
 
+import CreateJobPage from './pages/CreateJobPage';
+
 function App() {
   return (
     <Router>
@@ -14,6 +16,7 @@ function App() {
         {/* Protected Routes */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/jobs/new" element={<CreateJobPage />} />
           {/* Add other routes here later */}
         </Route>
 

@@ -10,7 +10,8 @@ import {
     ChevronDown,
     ChevronRight,
     Watch,
-    FolderOpen
+    FolderOpen,
+    Plus
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActive }) => {
@@ -90,6 +91,17 @@ const Sidebar = () => {
 
             {/* Navigation */}
             <nav className="flex-1 space-y-6 overflow-y-auto">
+                {/* New Booking Action */}
+                <div className="mb-6">
+                    <NavLink
+                        to="/jobs/new"
+                        className="flex items-center justify-center gap-3 w-full bg-[#0F172A] text-white py-3.5 px-4 rounded-xl shadow-lg shadow-[#0F172A]/20 hover:bg-[#1E293B] hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 group"
+                    >
+                        <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+                        <span className="font-medium tracking-wide">New Booking</span>
+                    </NavLink>
+                </div>
+
                 {/* Main Section */}
                 <div>
                     <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/dashboard" />
