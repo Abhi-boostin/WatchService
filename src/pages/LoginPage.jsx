@@ -11,21 +11,11 @@ const LoginPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = async (e) => {
+    const handleLogin = (e) => {
         e.preventDefault();
-        setError('');
-        setIsLoading(true);
-
-        try {
-            const data = await authService.login(username, password);
-            localStorage.setItem('token', data.access_token);
-            navigate('/');
-        } catch (err) {
-            console.error('Login failed:', err);
-            setError('Invalid username or password. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
+        // Bypass auth for UI development
+        localStorage.setItem('token', 'dummy-token');
+        navigate('/dashboard');
     };
 
     return (
@@ -138,16 +128,6 @@ const LoginPage = () => {
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-16 text-white text-center">
-                    <h3 className="text-5xl font-normal mb-4 tracking-wide text-[#FDFBF7] font-vend">TIMELESS LOGIN</h3>
-                    <p className="text-3xl font-light text-[#FDFBF7]/90 italic mb-8 font-vend">
-                        Member Access
-                    </p>
-                    <h4 className="text-2xl font-bold mb-2 font-vend">Precision & Excellence</h4>
-                    <p className="text-lg text-white/90 max-w-md mx-auto font-light font-vend">
-                        Manage your watch service operations with our premium management solution.
-                    </p>
-                </div>
             </div>
         </div>
     );
