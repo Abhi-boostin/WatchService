@@ -11,11 +11,22 @@ const LoginPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        // Bypass auth for UI development
-        localStorage.setItem('token', 'dummy-token');
-        navigate('/dashboard');
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const data = await authService.login(username, password);
+            localStorage.setItem('token', data.access_token);
+            // Optionally store user info if returned
+            navigate('/dashboard');
+        } catch (err) {
+            console.error("Login failed:", err);
+            setError('Invalid username or password. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

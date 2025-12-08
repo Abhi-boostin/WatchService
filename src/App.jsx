@@ -4,6 +4,8 @@ import LoginPage from './pages/LoginPage';
 
 import MainLayout from './components/layout/MainLayout';
 import DashboardPage from './pages/DashboardPage';
+import JobListPage from './pages/JobListPage';
+import JobDetailsPage from './pages/JobDetailsPage';
 
 import CreateJobPage from './pages/CreateJobPage';
 
@@ -16,11 +18,13 @@ function App() {
         {/* Protected Routes */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/jobs" element={<JobListPage />} />
           <Route path="/jobs/new" element={<CreateJobPage />} />
+          <Route path="/jobs/:id" element={<JobDetailsPage />} />
           {/* Add other routes here later */}
         </Route>
 
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>
   );

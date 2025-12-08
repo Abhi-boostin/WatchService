@@ -113,9 +113,9 @@ const Sidebar = () => {
                         onToggle={() => toggleSection('product')}
                     >
                         <SubItem label="Overview" to="/jobs" />
-                        <SubItem label="Active Jobs" to="/jobs/active" count={3} />
-                        <SubItem label="Completed" to="/jobs/completed" />
-                        <SubItem label="Pending" to="/jobs/pending" count={8} />
+                        <SubItem label="Active Jobs" to="/jobs?status_filter=in_progress" />
+                        <SubItem label="Completed" to="/jobs?status_filter=completed" />
+                        <SubItem label="Pending" to="/jobs?status_filter=booked" />
                     </SidebarItem>
 
                     <SidebarItem
