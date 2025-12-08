@@ -15,6 +15,7 @@ const JobListPage = () => {
     // Filter states
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState(searchParams.get('status_filter') || '');
+    const [sortBy, setSortBy] = useState('created_at_desc');
 
     useEffect(() => {
         // Update filter if URL param changes
@@ -27,7 +28,7 @@ const JobListPage = () => {
 
     useEffect(() => {
         fetchJobs();
-    }, [page, search, statusFilter]);
+    }, [page, search, statusFilter, sortBy]);
 
     const fetchJobs = async () => {
         setLoading(true);
@@ -37,7 +38,28 @@ const JobListPage = () => {
             if (statusFilter) query += `&status_filter=${statusFilter}`;
 
             const response = await api.get(query);
-            setJobs(response.data.items || []);
+            let fetchedJobs = response.data.items || [];
+
+            // Client-side sorting
+            fetchedJobs.sort((a, b) => {
+                if (sortBy === 'created_at_desc') {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                } else if (sortBy === 'created_at_asc') {
+                    return new Date(a.created_at) - new Date(b.created_at);
+                } else if (sortBy === 'delivery_date_asc') {
+                    // Handle null dates (put them last)
+                    if (!a.estimated_delivery_date) return 1;
+                    if (!b.estimated_delivery_date) return -1;
+                    return new Date(a.estimated_delivery_date) - new Date(b.estimated_delivery_date);
+                } else if (sortBy === 'delivery_date_desc') {
+                    if (!a.estimated_delivery_date) return 1;
+                    if (!b.estimated_delivery_date) return -1;
+                    return new Date(b.estimated_delivery_date) - new Date(a.estimated_delivery_date);
+                }
+                return 0;
+            });
+
+            setJobs(fetchedJobs);
             setTotalPages(response.data.pages || 1);
         } catch (error) {
             console.error("Error fetching jobs:", error);
@@ -124,7 +146,7 @@ const JobListPage = () => {
                         className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all"
                     />
                 </div>
-                <div className="w-full md:w-64 relative">
+                <div className="w-full md:w-48 relative">
                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <select
                         value={statusFilter}
@@ -139,6 +161,19 @@ const JobListPage = () => {
                         <option value="completed">Completed</option>
                         <option value="delivered">Delivered</option>
                         <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div className="w-full md:w-48 relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all appearance-none bg-white"
+                    >
+                        <option value="created_at_desc">Newest First</option>
+                        <option value="created_at_asc">Oldest First</option>
+                        <option value="delivery_date_asc">Delivery: Soonest</option>
+                        <option value="delivery_date_desc">Delivery: Latest</option>
                     </select>
                 </div>
             </div>
