@@ -52,33 +52,7 @@ const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActi
     );
 };
 
-const SubItem = ({ label, to, count }) => (
-    <NavLink
-        to={to}
-        className={({ isActive }) => `
-      flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors
-      ${isActive ? 'bg-gray-100 text-gray-900 font-medium' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}
-    `}
-    >
-        <span>{label}</span>
-        {count && (
-            <span className={`text-xs px-2 py-0.5 rounded-full ${count > 0 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}>
-                {count}
-            </span>
-        )}
-    </NavLink>
-);
-
 const Sidebar = () => {
-    const [openSections, setOpenSections] = useState({
-        product: true,
-        customers: false,
-    });
-
-    const toggleSection = (section) => {
-        setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
-    };
-
     return (
         <div className="w-64 h-screen bg-[#F7F7F8] border-r border-gray-200 flex flex-col p-4">
             {/* Logo */}
@@ -105,40 +79,8 @@ const Sidebar = () => {
                 {/* Main Section */}
                 <div>
                     <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/dashboard" />
-
-                    <SidebarItem
-                        icon={Package}
-                        label="Jobs"
-                        isOpen={openSections.product}
-                        onToggle={() => toggleSection('product')}
-                    >
-                        <SubItem label="Overview" to="/jobs" />
-                        <SubItem label="Active Jobs" to="/jobs?status_filter=in_progress" />
-                        <SubItem label="Completed" to="/jobs?status_filter=completed" />
-                        <SubItem label="Pending" to="/jobs?status_filter=booked" />
-                    </SidebarItem>
-
-                    <SidebarItem
-                        icon={Users}
-                        label="Customers"
-                        isOpen={openSections.customers}
-                        onToggle={() => toggleSection('customers')}
-                    >
-                        <SubItem label="All Customers" to="/customers" />
-                        <SubItem label="Add New" to="/customers/new" />
-                    </SidebarItem>
-
-                    <SidebarItem icon={ShoppingBag} label="Inventory" to="/inventory" />
-                </div>
-
-                {/* Secondary Section */}
-                <div>
-                    <div className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        Management
-                    </div>
-                    <SidebarItem icon={BarChart3} label="Reports" to="/reports" />
-                    <SidebarItem icon={FolderOpen} label="Files" to="/files" />
-                    <SidebarItem icon={Settings} label="Settings" to="/settings" />
+                    <SidebarItem icon={Package} label="Jobs" to="/jobs" />
+                    <SidebarItem icon={Users} label="Customers" to="/customers" />
                 </div>
             </nav>
 

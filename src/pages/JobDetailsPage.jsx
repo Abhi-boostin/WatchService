@@ -156,11 +156,13 @@ const JobDetailsPage = () => {
                         className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="booked">Booked</option>
-                        <option value="in_progress">In Progress</option>
+                        <option value="indented">Indented</option>
                         <option value="waiting_for_parts">Waiting for Parts</option>
+                        <option value="parts_received">Parts Received</option>
                         <option value="completed">Completed</option>
                         <option value="delivered">Delivered</option>
                         <option value="cancelled">Cancelled</option>
+
                     </select>
                 </div>
             </div>
@@ -226,11 +228,27 @@ const JobDetailsPage = () => {
                                     <span className="font-medium text-gray-900">${job.estimated_cost || '0.00'}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-500">Est. Parts Cost</span>
+                                    <span className="font-medium text-gray-900">${job.estimated_parts_cost || '0.00'}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-500">Est. Labour Cost</span>
+                                    <span className="font-medium text-gray-900">${job.estimated_labour_cost || '0.00'}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-gray-100">
                                     <span className="text-gray-500">Delivery Date</span>
                                     <span className="font-medium text-gray-900">
                                         {job.estimated_delivery_date ? new Date(job.estimated_delivery_date).toLocaleDateString() : '-'}
                                     </span>
                                 </div>
+                                {job.original_estimated_delivery_date && job.original_estimated_delivery_date !== job.estimated_delivery_date && (
+                                    <div className="flex justify-between py-2 border-b border-gray-100">
+                                        <span className="text-gray-500">Original Est. Date</span>
+                                        <span className="font-medium text-gray-500 line-through">
+                                            {new Date(job.original_estimated_delivery_date).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
