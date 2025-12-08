@@ -12,6 +12,10 @@ import CustomerListPage from './pages/CustomerListPage';
 import CustomerDetailsPage from './pages/CustomerDetailsPage';
 import ProfilePage from './pages/ProfilePage';
 import SuppliersPage from './pages/SuppliersPage';
+import BrandsPage from './pages/BrandsPage';
+import ComplaintsPage from './pages/ComplaintsPage';
+import ConditionsPage from './pages/ConditionsPage';
+import IndentsPage from './pages/IndentsPage';
 
 function App() {
   return (
@@ -28,7 +32,11 @@ function App() {
             <Route path="/jobs/:id" element={<JobDetailsPage />} />
             <Route path="/customers" element={<CustomerListPage />} />
             <Route path="/customers/:id" element={<CustomerDetailsPage />} />
+            <Route path="/indents" element={<IndentsPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/brands" element={<BrandsPage />} />
+            <Route path="/settings/complaints" element={<ComplaintsPage />} />
+            <Route path="/settings/conditions" element={<ConditionsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             {/* Add other routes here later */}
           </Route>
