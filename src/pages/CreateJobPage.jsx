@@ -412,10 +412,24 @@ const CreateJobPage = () => {
         });
     };
 
-    const handleSubmit = async () => {
+    // State to track created resources
+    const [createdCustomerId, setCreatedCustomerId] = useState(null);
+    const [createdJobId, setCreatedJobId] = useState(null);
+    const [createdWatchId, setCreatedWatchId] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleStep1Next = async () => {
         try {
-            // 1. Create/Get Customer
+            // Validate Customer Data (Basic validation)
+            if (!formData.customer.name || !formData.customer.contact_number) {
+                alert("Please fill in Name and Contact Number");
+                return;
+            }
+
+            setIsLoading(true);
             let customerId = formData.customer.id;
+
+            // 1. Create or Update Customer
             if (!customerId) {
                 // Create new customer
                 const customerResponse = await api.post('/api/v1/customers', {
@@ -424,49 +438,109 @@ const CreateJobPage = () => {
                     email: formData.customer.email,
                     address: formData.customer.address,
                     city: formData.customer.city,
+                    state: formData.customer.state,
+                    country: formData.customer.country,
+                    postal_code: formData.customer.postal_code,
                     date_of_birth: formData.customer.date_of_birth,
                     gender: formData.customer.gender
                 });
                 customerId = customerResponse.data.id;
             } else {
-                // Update existing customer
-                await api.put(`/api/v1/customers/${customerId}`, {
+                // Update existing customer (if needed, or just use ID)
+                // We update to ensure latest details are saved
+                await api.patch(`/api/v1/customers/${customerId}`, {
                     name: formData.customer.name,
                     contact_number: formData.customer.contact_number,
                     email: formData.customer.email,
                     address: formData.customer.address,
                     city: formData.customer.city,
+                    state: formData.customer.state,
+                    country: formData.customer.country,
+                    postal_code: formData.customer.postal_code,
                     date_of_birth: formData.customer.date_of_birth,
                     gender: formData.customer.gender
                 });
             }
+            setCreatedCustomerId(customerId);
 
-            // 2. Create Job
-            const jobResponse = await api.post('/api/v1/jobs', {
-                customer_id: customerId,
-                status: 'booked',
-                estimated_delivery_date: formData.issues.estimated_delivery,
-                notes: formData.issues.other_issue,
-                estimated_cost: parseFloat(formData.issues.estimated_cost) || 0
-            });
-            const jobId = jobResponse.data.id;
+            // 2. Create Job (if not already created)
+            let jobId = createdJobId;
+            if (!jobId) {
+                const jobResponse = await api.post('/api/v1/jobs', {
+                    customer_id: customerId,
+                    estimated_delivery_date: null, // Will be updated in Step 3
+                    notes: '' // Will be updated in Step 3
+                });
+                jobId = jobResponse.data.id;
+                setCreatedJobId(jobId);
+            }
 
-            // 3. Create Watch
-            const watchResponse = await api.post('/api/v1/watches', {
-                job_id: jobId,
-                brand_id: parseInt(formData.watch.brand_id),
-                model_number: formData.watch.model_number,
-                watch_serial_number: formData.watch.watch_serial_number,
-                date_of_purchase: formData.watch.date_of_purchase,
-                ucp_rate: parseFloat(formData.watch.ucp_rate) || 0,
-                other_remarks: formData.watch.other_remarks
-            });
-            const watchId = watchResponse.data.id;
+            // Move to next step
+            setCurrentStep(2);
+
+        } catch (error) {
+            console.error("Error in Step 1:", error);
+            alert("Failed to save customer or create job. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleStep2Next = async () => {
+        try {
+            // Validate Watch Data
+            if (!formData.watch.brand_id || !formData.watch.model_number) {
+                alert("Please select Brand and enter Model Number");
+                return;
+            }
+
+            if (!createdJobId) {
+                alert("Job ID is missing. Please go back and try again.");
+                return;
+            }
+
+            setIsLoading(true);
+
+            // 3. Create Watch (if not already created)
+            let watchId = createdWatchId;
+            if (!watchId) {
+                const watchResponse = await api.post('/api/v1/watches', {
+                    job_id: createdJobId,
+                    brand_id: parseInt(formData.watch.brand_id),
+                    model_number: formData.watch.model_number,
+                    watch_serial_number: formData.watch.watch_serial_number,
+                    date_of_purchase: formData.watch.date_of_purchase,
+                    ucp_rate: parseFloat(formData.watch.ucp_rate) || 0,
+                    other_remarks: formData.watch.other_remarks
+                });
+                watchId = watchResponse.data.id;
+                setCreatedWatchId(watchId);
+            }
+
+            // Move to next step
+            setCurrentStep(3);
+
+        } catch (error) {
+            console.error("Error in Step 2:", error);
+            alert("Failed to save watch details. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleStep3Next = async () => {
+        try {
+            if (!createdWatchId || !createdJobId) {
+                alert("Missing Watch or Job ID. Please go back.");
+                return;
+            }
+
+            setIsLoading(true);
 
             // 4. Attach Complaints (Batch)
             if (formData.issues.complaint_node_ids.length > 0) {
                 await api.post('/api/v1/complaints/watch-complaints/batch', {
-                    watch_id: watchId,
+                    watch_id: createdWatchId,
                     complaint_node_ids: formData.issues.complaint_node_ids,
                     notes: "Customer reported"
                 });
@@ -475,18 +549,46 @@ const CreateJobPage = () => {
             // 5. Attach Conditions (Batch)
             if (formData.issues.condition_node_ids.length > 0) {
                 await api.post('/api/v1/conditions/watch-conditions/batch', {
-                    watch_id: watchId,
+                    watch_id: createdWatchId,
                     condition_node_ids: formData.issues.condition_node_ids,
                     notes: "Initial conditions"
                 });
             }
 
-            // 5. Upload Images
+            // 6. Update Job with Estimated Delivery, Cost, and Notes
+            await api.patch(`/api/v1/jobs/${createdJobId}`, {
+                status: 'booked', // Keep status as booked
+                estimated_delivery_date: formData.issues.estimated_delivery,
+                notes: formData.issues.other_issue,
+                estimated_cost: parseFloat(formData.issues.estimated_cost) || 0
+            });
+
+            // Move to next step
+            setCurrentStep(4);
+
+        } catch (error) {
+            console.error("Error in Step 3:", error);
+            alert("Failed to save issues and conditions. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleFinalSubmit = async () => {
+        try {
+            if (!createdWatchId) {
+                alert("Watch ID missing.");
+                return;
+            }
+
+            setIsLoading(true);
+
+            // 7. Upload Images
             if (formData.images.length > 0) {
                 for (const image of formData.images) {
                     const formDataImage = new FormData();
                     formDataImage.append('file', image);
-                    await api.post(`/api/v1/watches/${watchId}/attachments`, formDataImage, {
+                    await api.post(`/api/v1/watches/${createdWatchId}/attachments`, formDataImage, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
                 }
@@ -494,11 +596,13 @@ const CreateJobPage = () => {
 
             // Navigate to dashboard or job details
             alert('Job Created Successfully!');
-            navigate(`/jobs/${jobId}`);
+            navigate(`/jobs/${createdJobId}`);
 
         } catch (error) {
-            console.error("Error creating job:", error);
-            alert('Failed to create job. Please try again.');
+            console.error("Error in Final Step:", error);
+            alert('Failed to upload images or finish job. Please try again.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -563,17 +667,37 @@ const CreateJobPage = () => {
 
                     {currentStep < steps.length ? (
                         <button
-                            onClick={() => setCurrentStep(prev => Math.min(steps.length, prev + 1))}
-                            className="px-6 py-2.5 bg-[#0F172A] text-white rounded-xl hover:bg-[#1E293B] transition-colors shadow-lg shadow-gray-900/20"
+                            onClick={() => {
+                                if (currentStep === 1) handleStep1Next();
+                                if (currentStep === 2) handleStep2Next();
+                                if (currentStep === 3) handleStep3Next();
+                            }}
+                            disabled={isLoading}
+                            className={`px-6 py-2.5 bg-[#0F172A] text-white rounded-xl hover:bg-[#1E293B] transition-colors shadow-lg shadow-gray-900/20 flex items-center gap-2 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
                         >
-                            Next Step
+                            {isLoading ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Processing...
+                                </>
+                            ) : (
+                                'Next Step'
+                            )}
                         </button>
                     ) : (
                         <button
-                            onClick={handleSubmit}
-                            className="px-8 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-900/20 font-medium"
+                            onClick={handleFinalSubmit}
+                            disabled={isLoading}
+                            className={`px-8 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors shadow-lg shadow-green-900/20 font-medium flex items-center gap-2 ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
                         >
-                            Create Job Card
+                            {isLoading ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Processing...
+                                </>
+                            ) : (
+                                'Finish & Create Job'
+                            )}
                         </button>
                     )}
                 </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, User, Watch, AlertTriangle, Image as ImageIcon,
-    Calendar, DollarSign, Clock, CheckCircle, XCircle
+    Calendar, DollarSign, Clock, CheckCircle, XCircle,
+    MessageSquare, ClipboardCheck
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -15,6 +16,7 @@ const JobDetailsPage = () => {
     const [customer, setCustomer] = useState(null);
     const [watch, setWatch] = useState(null);
     const [conditions, setConditions] = useState([]);
+    const [complaints, setComplaints] = useState([]);
     const [attachments, setAttachments] = useState([]);
 
     useEffect(() => {
@@ -64,6 +66,14 @@ const JobDetailsPage = () => {
                         if (mounted) setConditions(conditionsRes.data);
                     } catch (err) {
                         console.warn("Error fetching conditions:", err);
+                    }
+
+                    // 5. Fetch Complaints
+                    try {
+                        const complaintsRes = await api.get(`/api/v1/complaints/watch-complaints/watch/${watchId}`);
+                        if (mounted) setComplaints(complaintsRes.data);
+                    } catch (err) {
+                        console.warn("Error fetching complaints:", err);
                     }
 
                     // 5. Fetch Attachments
@@ -308,24 +318,64 @@ const JobDetailsPage = () => {
                 )}
 
                 {activeTab === 'issues' && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Reported Issues & Conditions</h3>
-                        {conditions.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {conditions.map((condition, index) => (
-                                    <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5" />
-                                        <div>
-                                            {/* We might need to map condition ID to label if the API only returns IDs */}
-                                            <p className="font-medium text-gray-900">Condition ID: {condition.condition_node_id}</p>
-                                            <p className="text-sm text-gray-500">{condition.notes || 'No notes'}</p>
+                    <div className="space-y-8">
+                        {/* Complaints Section */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <MessageSquare className="w-5 h-5 text-red-500" />
+                                Customer Complaints
+                            </h3>
+                            {complaints.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {complaints.map((item, index) => (
+                                        <div key={index} className="p-4 bg-red-50 rounded-xl border border-red-100 transition-all hover:shadow-sm">
+                                            <div className="flex items-start gap-3">
+                                                <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                                                <div>
+                                                    <p className="font-medium text-gray-900">
+                                                        {item.complaint_node?.label || `Complaint ID: ${item.complaint_node_id}`}
+                                                    </p>
+                                                    {item.notes && <p className="text-sm text-gray-600 mt-1">{item.notes}</p>}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-gray-500">No specific conditions recorded.</p>
-                        )}
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                    <p className="text-gray-500 italic">No complaints recorded.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Conditions Section */}
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <ClipboardCheck className="w-5 h-5 text-blue-500" />
+                                Watch Conditions
+                            </h3>
+                            {conditions.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {conditions.map((item, index) => (
+                                        <div key={index} className="p-4 bg-blue-50 rounded-xl border border-blue-100 transition-all hover:shadow-sm">
+                                            <div className="flex items-start gap-3">
+                                                <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                                                <div>
+                                                    <p className="font-medium text-gray-900">
+                                                        {item.condition_node?.label || `Condition ID: ${item.condition_node_id}`}
+                                                    </p>
+                                                    {item.notes && <p className="text-sm text-gray-600 mt-1">{item.notes}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                    <p className="text-gray-500 italic">No conditions recorded.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
