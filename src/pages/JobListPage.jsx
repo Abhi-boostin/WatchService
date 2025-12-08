@@ -194,7 +194,10 @@ const JobListPage = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <button
-                                                        onClick={() => navigate(`/jobs/${job.id}`)}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigate(`/jobs/${job.id}`);
+                                                        }}
                                                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                                         title="View Details"
                                                     >

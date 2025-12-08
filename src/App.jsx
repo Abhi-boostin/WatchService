@@ -9,6 +9,7 @@ import JobDetailsPage from './pages/JobDetailsPage';
 import CreateJobPage from './pages/CreateJobPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CustomerListPage from './pages/CustomerListPage';
+import CustomerDetailsPage from './pages/CustomerDetailsPage';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
             <Route path="/jobs/new" element={<CreateJobPage />} />
             <Route path="/jobs/:id" element={<JobDetailsPage />} />
             <Route path="/customers" element={<CustomerListPage />} />
+            <Route path="/customers/:id" element={<CustomerDetailsPage />} />
             {/* Add other routes here later */}
           </Route>
         </Route>

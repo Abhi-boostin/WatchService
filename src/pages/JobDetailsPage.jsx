@@ -18,67 +18,78 @@ const JobDetailsPage = () => {
     const [attachments, setAttachments] = useState([]);
 
     useEffect(() => {
-        fetchJobDetails();
-    }, [id]);
+        let mounted = true;
 
-    const fetchJobDetails = async () => {
-        setLoading(true);
-        try {
-            // 1. Fetch Job
-            const jobRes = await api.get(`/api/v1/jobs/${id}`);
-            const jobData = jobRes.data;
-            setJob(jobData);
+        const fetchJobDetails = async () => {
+            // Avoid setting loading if we already have data for this ID to prevent flash
+            // But here we want to show loading for new ID
+            setLoading(true);
+            try {
+                // 1. Fetch Job
+                const jobRes = await api.get(`/api/v1/jobs/${id}`);
+                if (!mounted) return;
 
-            // 2. Fetch Customer
-            if (jobData.customer_id) {
-                try {
-                    const customerRes = await api.get(`/api/v1/customers/${jobData.customer_id}`);
-                    setCustomer(customerRes.data);
-                } catch (err) {
-                    console.warn("Error fetching customer:", err);
+                const jobData = jobRes.data;
+                setJob(jobData);
+
+                // 2. Fetch Customer
+                if (jobData.customer_id) {
+                    try {
+                        const customerRes = await api.get(`/api/v1/customers/${jobData.customer_id}`);
+                        if (mounted) setCustomer(customerRes.data);
+                    } catch (err) {
+                        console.warn("Error fetching customer:", err);
+                    }
                 }
+
+                // 3. Fetch Watch
+                let watchData = jobData.watch;
+
+                if (!watchData) {
+                    try {
+                        const watchRes = await api.get(`/api/v1/watches/job/${id}`);
+                        if (mounted) watchData = watchRes.data;
+                    } catch (err) {
+                        console.warn("Could not fetch watch by job ID:", err);
+                    }
+                }
+
+                if (mounted && watchData) {
+                    setWatch(watchData);
+                    const watchId = watchData.id;
+
+                    // 4. Fetch Conditions
+                    try {
+                        const conditionsRes = await api.get(`/api/v1/conditions/watch-conditions/watch/${watchId}`);
+                        if (mounted) setConditions(conditionsRes.data);
+                    } catch (err) {
+                        console.warn("Error fetching conditions:", err);
+                    }
+
+                    // 5. Fetch Attachments
+                    try {
+                        const attachmentsRes = await api.get(`/api/v1/watches/${watchId}/attachments`);
+                        if (mounted) setAttachments(attachmentsRes.data);
+                    } catch (err) {
+                        console.warn("Error fetching attachments:", err);
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error fetching job details:", error);
+            } finally {
+                if (mounted) setLoading(false);
             }
+        };
 
-            // 3. Fetch Watch
-            let watchData = jobData.watch; // Check if watch is nested
-
-            if (!watchData) {
-                try {
-                    // Try fetching by job ID
-                    const watchRes = await api.get(`/api/v1/watches/job/${id}`);
-                    watchData = watchRes.data;
-                } catch (err) {
-                    console.warn("Could not fetch watch by job ID:", err);
-                }
-            }
-
-            if (watchData) {
-                setWatch(watchData);
-                const watchId = watchData.id;
-
-                // 4. Fetch Conditions
-                try {
-                    const conditionsRes = await api.get(`/api/v1/conditions/watch-conditions/watch/${watchId}`);
-                    setConditions(conditionsRes.data);
-                } catch (err) {
-                    console.warn("Error fetching conditions:", err);
-                }
-
-                // 5. Fetch Attachments
-                try {
-                    const attachmentsRes = await api.get(`/api/v1/watches/${watchId}/attachments`);
-                    setAttachments(attachmentsRes.data);
-                } catch (err) {
-                    console.warn("Error fetching attachments:", err);
-                }
-            }
-
-        } catch (error) {
-            console.error("Error fetching job details:", error);
-        } finally {
-            setLoading(false);
+        if (id) {
+            fetchJobDetails();
         }
-    };
+
+        return () => {
+            mounted = false;
+        };
+    }, [id]);
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User },
@@ -145,8 +156,8 @@ const JobDetailsPage = () => {
                                         status: newStatus,
                                         notes: `Status updated to ${newStatus}`
                                     });
-                                    // Refresh data
-                                    fetchJobDetails();
+                                    // Update local state immediately
+                                    setJob(prev => ({ ...prev, status: newStatus }));
                                 } catch (err) {
                                     console.error("Failed to update status:", err);
                                     alert("Failed to update status");

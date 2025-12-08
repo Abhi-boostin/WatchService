@@ -74,7 +74,11 @@ const CustomerListPage = () => {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredCustomers.map((customer) => (
-                        <div key={customer.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                        <div
+                            key={customer.id}
+                            onClick={() => navigate(`/customers/${customer.id}`)}
+                            className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+                        >
                             <div className="flex items-start justify-between mb-4">
                                 <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-semibold text-lg group-hover:scale-110 transition-transform">
                                     {customer.name.charAt(0).toUpperCase()}
