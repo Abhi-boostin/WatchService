@@ -157,7 +157,6 @@ const JobListPage = () => {
                         <option value="">All Statuses</option>
                         <option value="booked">Booked</option>
                         <option value="indented">Indented</option>
-                        <option value="waiting_for_parts">Waiting for Parts</option>
                         <option value="parts_received">Parts Received</option>
                         <option value="completed">Completed</option>
                         <option value="delivered">Delivered</option>

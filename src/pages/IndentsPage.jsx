@@ -46,10 +46,15 @@ const IndentsPage = () => {
     const fetchDependencies = async () => {
         try {
             const [jobsRes, suppliersRes] = await Promise.all([
-                api.get('/api/v1/jobs?status=booked'), // Assuming filter exists
+                api.get('/api/v1/jobs?status=booked'),
                 api.get('/api/v1/suppliers')
             ]);
-            setJobs(jobsRes.data.items || jobsRes.data || []);
+
+            const fetchedJobs = jobsRes.data.items || jobsRes.data || [];
+            // Sort jobs by created_at descending (newest first)
+            fetchedJobs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            setJobs(fetchedJobs);
             setSuppliers(suppliersRes.data.items || suppliersRes.data || []);
         } catch (error) {
             console.error("Error fetching dependencies:", error);
@@ -141,7 +146,7 @@ const IndentsPage = () => {
                                         <option value="">Select a Job</option>
                                         {jobs.map(job => (
                                             <option key={job.id} value={job.id}>
-                                                Job #{job.job_id} - {job.customer?.name || 'Unknown Customer'}
+                                                {job.job_number || `Job #${job.id}`} - Customer #{job.customer_id}
                                             </option>
                                         ))}
                                     </select>
