@@ -16,6 +16,7 @@ const JobListPage = () => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState(searchParams.get('status_filter') || '');
     const [sortBy, setSortBy] = useState('created_at_desc');
+    const [pageSize, setPageSize] = useState(20);
 
     useEffect(() => {
         // Update filter if URL param changes
@@ -28,12 +29,12 @@ const JobListPage = () => {
 
     useEffect(() => {
         fetchJobs();
-    }, [page, search, statusFilter, sortBy]);
+    }, [page, search, statusFilter, sortBy, pageSize]);
 
     const fetchJobs = async () => {
         setLoading(true);
         try {
-            let query = `/api/v1/jobs?page=${page}&page_size=20`;
+            let query = `/api/v1/jobs?page=${page}&page_size=${pageSize}`;
             if (search) query += `&search=${search}`;
             if (statusFilter) query += `&status_filter=${statusFilter}`;
 
@@ -285,9 +286,23 @@ const JobListPage = () => {
 
             {/* Pagination */}
             <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30 mt-6 rounded-xl">
-                <span className="text-sm text-gray-500">
-                    Page {page} of {totalPages}
-                </span>
+                <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-500">
+                        Page {page} of {totalPages}
+                    </span>
+                    <select
+                        value={pageSize}
+                        onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setPage(1);
+                        }}
+                        className="px-2 py-1 rounded border border-gray-200 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                        <option value={20}>20 per page</option>
+                        <option value={50}>50 per page</option>
+                        <option value={100}>100 per page</option>
+                    </select>
+                </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setPage(p => Math.max(1, p - 1))}

@@ -10,6 +10,8 @@ import CreateJobPage from './pages/CreateJobPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CustomerListPage from './pages/CustomerListPage';
 import CustomerDetailsPage from './pages/CustomerDetailsPage';
+import ProfilePage from './pages/ProfilePage';
+import SuppliersPage from './pages/SuppliersPage';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
             <Route path="/jobs/:id" element={<JobDetailsPage />} />
             <Route path="/customers" element={<CustomerListPage />} />
             <Route path="/customers/:id" element={<CustomerDetailsPage />} />
+            <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             {/* Add other routes here later */}
           </Route>
         </Route>

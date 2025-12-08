@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import api from '../../services/api';
 import {
     LayoutDashboard,
     Package,
@@ -11,7 +12,13 @@ import {
     ChevronRight,
     Watch,
     FolderOpen,
-    Plus
+    Plus,
+    ClipboardList,
+    Tag,
+    FileBarChart,
+    AlertTriangle,
+    CheckSquare,
+    UserCog
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActive }) => {
@@ -53,6 +60,32 @@ const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActi
 };
 
 const Sidebar = () => {
+    const [user, setUser] = useState(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const response = await api.get('/api/v1/auth/me');
+                setUser(response.data);
+            } catch (error) {
+                console.error("Failed to fetch user info:", error);
+            }
+        };
+        fetchUser();
+    }, []);
+
+    const getUserInitials = (name) => {
+        if (!name) return 'U';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    };
+
+    const getUserRole = (user) => {
+        if (user.is_admin) return 'Administrator';
+        if (user.is_manager) return 'Manager';
+        return 'Staff';
+    };
+
     return (
         <div className="w-64 h-screen bg-[#F7F7F8] border-r border-gray-200 flex flex-col p-4">
             {/* Logo */}
@@ -82,19 +115,59 @@ const Sidebar = () => {
                     <SidebarItem icon={Package} label="Jobs" to="/jobs" />
                     <SidebarItem icon={Users} label="Customers" to="/customers" />
                 </div>
+
+                {/* Inventory Section */}
+                <div>
+                    <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Inventory</p>
+                    <SidebarItem icon={ClipboardList} label="Indents" to="/indents" />
+                    <SidebarItem icon={Tag} label="Brands" to="/brands" />
+                    <SidebarItem icon={ShoppingBag} label="Suppliers" to="/suppliers" />
+                </div>
+
+                {/* Reports Section */}
+                <div>
+                    <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Reports</p>
+                    <SidebarItem icon={FileBarChart} label="Reports" to="/reports" />
+                </div>
+
+                {/* Settings Section (Admin Only) */}
+                {user?.is_admin && (
+                    <div>
+                        <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Settings</p>
+                        <SidebarItem
+                            icon={Settings}
+                            label="Settings"
+                            isOpen={isSettingsOpen}
+                            onToggle={() => setIsSettingsOpen(!isSettingsOpen)}
+                        >
+                            <SidebarItem icon={AlertTriangle} label="Complaints" to="/settings/complaints" />
+                            <SidebarItem icon={CheckSquare} label="Conditions" to="/settings/conditions" />
+                            <SidebarItem icon={UserCog} label="Users" to="/settings/users" />
+                        </SidebarItem>
+                    </div>
+                )}
             </nav>
 
             {/* User Profile (Optional footer) */}
             <div className="mt-auto pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white hover:shadow-sm transition-all cursor-pointer">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium text-xs">
-                        JD
+                <NavLink
+                    to="/profile"
+                    className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white hover:shadow-sm transition-all cursor-pointer group"
+                >
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-medium text-xs group-hover:bg-gray-300 transition-colors">
+                        {user ? getUserInitials(user.full_name || user.username) : '...'}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">John Doe</p>
-                        <p className="text-xs text-gray-500 truncate">Admin</p>
+                        {user ? (
+                            <>
+                                <p className="text-sm font-medium text-gray-900 truncate">{user.full_name || user.username}</p>
+                                <p className="text-xs text-gray-500 truncate">{getUserRole(user)}</p>
+                            </>
+                        ) : (
+                            <div className="h-8 bg-gray-100 rounded animate-pulse"></div>
+                        )}
                     </div>
-                </div>
+                </NavLink>
             </div>
         </div>
     );
