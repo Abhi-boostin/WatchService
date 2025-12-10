@@ -67,6 +67,34 @@ const CustomerListPage = () => {
         setFormData({});
     };
 
+    const openCreateModal = () => {
+        setFormData({
+            name: '',
+            contact_number: '',
+            email: '',
+            address: '',
+            city: '',
+            state: '',
+            country: '',
+            postal_code: '',
+            date_of_birth: '',
+            gender: ''
+        });
+        setModalType('create');
+    };
+
+    const handleCreateCustomer = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/api/v1/customers', formData);
+            fetchCustomers();
+            closeModal();
+        } catch (error) {
+            console.error("Error creating customer:", error);
+            alert("Failed to create customer");
+        }
+    };
+
     const handleUpdateCustomer = async (e) => {
         e.preventDefault();
         try {
@@ -99,7 +127,7 @@ const CustomerListPage = () => {
                     <p className="text-gray-500 mt-1">Manage your customer base</p>
                 </div>
                 <button
-                    onClick={() => navigate('/customers/new')}
+                    onClick={openCreateModal}
                     className="flex items-center gap-2 px-6 py-2.5 bg-[#0F172A] text-white rounded-xl hover:bg-[#1E293B] transition-colors shadow-lg shadow-gray-900/20"
                 >
                     <Plus size={20} />
@@ -191,6 +219,7 @@ const CustomerListPage = () => {
                     <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                             <h3 className="text-lg font-bold text-gray-900">
+                                {modalType === 'create' && 'Add Customer'}
                                 {modalType === 'edit' && 'Edit Customer'}
                                 {modalType === 'delete' && 'Delete Customer'}
                             </h3>
@@ -200,16 +229,16 @@ const CustomerListPage = () => {
                         </div>
 
                         <div className="p-6">
-                            {modalType === 'edit' && (
-                                <form onSubmit={handleUpdateCustomer} className="space-y-4">
+                            {(modalType === 'edit' || modalType === 'create') && (
+                                <form onSubmit={modalType === 'create' ? handleCreateCustomer : handleUpdateCustomer} className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                        <input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                        <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                            <input type="text" required value={formData.contact_number} onChange={e => setFormData({ ...formData, contact_number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                            <input type="text" required value={formData.contact_number || ''} onChange={e => setFormData({ ...formData, contact_number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -242,7 +271,9 @@ const CustomerListPage = () => {
                                     </div>
                                     <div className="flex justify-end gap-3 mt-6">
                                         <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+                                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                            {modalType === 'create' ? 'Create Customer' : 'Save Changes'}
+                                        </button>
                                     </div>
                                 </form>
                             )}

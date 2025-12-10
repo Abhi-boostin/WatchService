@@ -92,7 +92,7 @@ const CreateJobPage = () => {
     const [complaintNodes, setComplaintNodes] = useState([]);
 
     // New state for customer lookup and watch selection
-    const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+
     const [existingWatches, setExistingWatches] = useState([]);
     const [showWatchModal, setShowWatchModal] = useState(false);
     const [allCustomers, setAllCustomers] = useState([]);
@@ -205,7 +205,6 @@ const CreateJobPage = () => {
             condition_node_ids: [],
             complaint_node_ids: [],
             other_issue: '',
-            other_issue: '',
             spare_parts: [],
             estimated_cost: '',
             estimated_delivery: ''
@@ -218,7 +217,7 @@ const CreateJobPage = () => {
     const handleCustomerLookup = async (phoneNumber) => {
         if (!phoneNumber || phoneNumber.length < 3) return;
 
-        setIsSearchingCustomer(true);
+
         try {
             // Local lookup from allCustomers state
             // Normalize phone numbers for comparison if needed (remove spaces, dashes, etc.)
@@ -235,32 +234,40 @@ const CreateJobPage = () => {
             }
         } catch (error) {
             console.error("Error searching customer:", error);
-        } finally {
-            setIsSearchingCustomer(false);
         }
     };
 
     const handleConfirmAutofill = async () => {
         if (!pendingCustomer) return;
 
-        const customer = pendingCustomer;
+        let customerData = pendingCustomer;
+
+        // Fetch full customer details to ensure we have all fields
+        try {
+            const response = await api.get(`/api/v1/customers/${pendingCustomer.id}`);
+            if (response.data) {
+                customerData = response.data;
+            }
+        } catch (error) {
+            console.warn("Failed to fetch full customer details, using cached data:", error);
+        }
 
         // Autofill customer data
         setFormData(prev => ({
             ...prev,
             customer: {
                 ...prev.customer,
-                id: customer.id,
-                name: customer.name || '',
-                contact_number: customer.contact_number || prev.customer.contact_number, // Keep current input if needed, or overwrite
-                email: customer.email || '',
-                address: customer.address || '',
-                city: customer.city || '',
-                state: customer.state || '',
-                country: customer.country || '',
-                postal_code: customer.postal_code || '',
-                date_of_birth: customer.date_of_birth ? customer.date_of_birth.split('T')[0] : '',
-                gender: customer.gender || ''
+                id: customerData.id,
+                name: customerData.name || '',
+                contact_number: customerData.contact_number || prev.customer.contact_number,
+                email: customerData.email || '',
+                address: customerData.address || '',
+                city: customerData.city || '',
+                state: customerData.state || '',
+                country: customerData.country || '',
+                postal_code: customerData.postal_code || '',
+                date_of_birth: customerData.date_of_birth ? customerData.date_of_birth.split('T')[0] : '',
+                gender: customerData.gender || ''
             }
         }));
 
@@ -269,7 +276,7 @@ const CreateJobPage = () => {
         // Fetch customer's watches via jobs
         try {
             // 1. Get all jobs for this customer
-            const jobsResponse = await api.get(`/api/v1/jobs?customer_id=${customer.id}`);
+            const jobsResponse = await api.get(`/api/v1/jobs?customer_id=${customerData.id}`);
             const jobs = jobsResponse.data.items || jobsResponse.data || [];
 
             if (jobs.length > 0) {
@@ -413,7 +420,7 @@ const CreateJobPage = () => {
     };
 
     // State to track created resources
-    const [createdCustomerId, setCreatedCustomerId] = useState(null);
+
     const [createdJobId, setCreatedJobId] = useState(null);
     const [createdWatchId, setCreatedWatchId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -461,7 +468,7 @@ const CreateJobPage = () => {
                     gender: formData.customer.gender
                 });
             }
-            setCreatedCustomerId(customerId);
+
 
             // 2. Create Job (if not already created)
             let jobId = createdJobId;
