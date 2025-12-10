@@ -17,7 +17,8 @@ import {
     Tag,
     FileBarChart,
     UserCog,
-    DollarSign
+    DollarSign,
+    Package
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActive }) => {
@@ -141,6 +142,7 @@ const Sidebar = () => {
                         >
                             <SidebarItem icon={ClipboardList} label="Service Parameters" to="/settings/service-parameters" />
                             <SidebarItem icon={DollarSign} label="Pricing Rules" to="/settings/pricing-rules" />
+                            <SidebarItem icon={Package} label="Spare Parts" to="/settings/spare-parts" />
                             <SidebarItem icon={UserCog} label="Users" to="/settings/users" />
                         </SidebarItem>
                     </div>

@@ -17,6 +17,7 @@ import IndentsPage from './pages/IndentsPage';
 import ServiceParametersPage from './pages/ServiceParametersPage';
 import ReportsPage from './pages/ReportsPage';
 import PricingRulesPage from './pages/PricingRulesPage';
+import SparePartsPage from './pages/SparePartsPage';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings/service-parameters" element={<ServiceParametersPage />} />
             <Route path="/settings/pricing-rules" element={<PricingRulesPage />} />
+            <Route path="/settings/spare-parts" element={<SparePartsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             {/* Add other routes here later */}
           </Route>
