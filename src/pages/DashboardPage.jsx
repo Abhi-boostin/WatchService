@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    LayoutDashboard, Plus, Clock, CheckCircle,
-    AlertCircle, Package, Search, ChevronRight
+    Plus, Clock, CheckCircle,
+    AlertCircle, Package, ChevronRight
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -134,7 +134,7 @@ const DashboardPage = () => {
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job ID</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Created</th>
                                 <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
@@ -151,11 +151,10 @@ const DashboardPage = () => {
                                 recentJobs.map((job) => (
                                     <tr key={job.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="font-mono text-sm font-medium text-gray-900">#{job.id}</span>
+                                            <span className="font-mono text-sm font-medium text-gray-900">#{job.job_number || job.id}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">{job.customer_id}</div>
-                                            {/* Note: In real app we'd fetch customer name or include it in job response */}
+                                            <div className="text-sm font-medium text-gray-900">Customer #{job.customer_id}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
@@ -166,7 +165,10 @@ const DashboardPage = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {new Date(job.created_at).toLocaleDateString()}
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{new Date(job.created_at).toLocaleDateString()}</span>
+                                                <span className="text-xs text-gray-400">{new Date(job.created_at).toLocaleTimeString()}</span>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button

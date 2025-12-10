@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, User, Watch, AlertTriangle, Image as ImageIcon,
     Calendar, DollarSign, Clock, CheckCircle, XCircle,
-    MessageSquare, ClipboardCheck
+    MessageSquare, ClipboardCheck, Pencil, Trash2, X
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -19,12 +19,14 @@ const JobDetailsPage = () => {
     const [complaints, setComplaints] = useState([]);
     const [attachments, setAttachments] = useState([]);
 
+    // Modal States
+    const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay'
+    const [formData, setFormData] = useState({});
+
     useEffect(() => {
         let mounted = true;
 
         const fetchJobDetails = async () => {
-            // Avoid setting loading if we already have data for this ID to prevent flash
-            // But here we want to show loading for new ID
             setLoading(true);
             try {
                 // 1. Fetch Job
@@ -108,6 +110,74 @@ const JobDetailsPage = () => {
         { id: 'images', label: 'Images', icon: ImageIcon },
     ];
 
+    // Actions
+    const openEditModal = () => {
+        setFormData({
+            estimated_cost: job.estimated_cost,
+            estimated_parts_cost: job.estimated_parts_cost,
+            estimated_labour_cost: job.estimated_labour_cost,
+            deduction: job.deduction,
+            deduction_note: job.deduction_note,
+            additional_charge: job.additional_charge,
+            additional_charge_note: job.additional_charge_note,
+            actual_cost: job.actual_cost,
+            estimated_delivery_date: job.estimated_delivery_date,
+            notes: job.notes
+        });
+        setModalType('edit');
+    };
+
+    const openDeleteModal = () => {
+        setModalType('delete');
+    };
+
+    const openDelayModal = () => {
+        setFormData({
+            delay_reason: '',
+            new_estimated_delivery_date: job.estimated_delivery_date || ''
+        });
+        setModalType('delay');
+    };
+
+    const closeModal = () => {
+        setModalType(null);
+        setFormData({});
+    };
+
+    const handleUpdateJob = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await api.patch(`/api/v1/jobs/${id}`, formData);
+            setJob(response.data);
+            closeModal();
+        } catch (error) {
+            console.error("Error updating job:", error);
+            alert("Failed to update job");
+        }
+    };
+
+    const handleDeleteJob = async () => {
+        try {
+            await api.delete(`/api/v1/jobs/${id}`);
+            navigate('/jobs');
+        } catch (error) {
+            console.error("Error deleting job:", error);
+            alert("Failed to delete job");
+        }
+    };
+
+    const handleDelayJob = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await api.post(`/api/v1/jobs/${id}/delay`, formData);
+            setJob(response.data);
+            closeModal();
+        } catch (error) {
+            console.error("Error adding delay:", error);
+            alert("Failed to add delay");
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -128,7 +198,7 @@ const JobDetailsPage = () => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
@@ -140,7 +210,7 @@ const JobDetailsPage = () => {
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold text-gray-900">Job #{job.id}</h1>
+                            <h1 className="text-2xl font-bold text-gray-900">Job #{job.job_number || job.id}</h1>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize
                                 ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
                                     job.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
@@ -154,8 +224,32 @@ const JobDetailsPage = () => {
                     </div>
                 </div>
 
-                {/* Status Actions */}
+                {/* Actions */}
                 <div className="flex items-center gap-3">
+                    <button
+                        onClick={openEditModal}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
+                        title="Edit Job Details"
+                    >
+                        <Pencil size={20} />
+                    </button>
+                    <button
+                        onClick={openDelayModal}
+                        className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-gray-200"
+                        title="Add Delay"
+                    >
+                        <Clock size={20} />
+                    </button>
+                    <button
+                        onClick={openDeleteModal}
+                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-200"
+                        title="Delete Job"
+                    >
+                        <Trash2 size={20} />
+                    </button>
+
+                    <div className="h-8 w-px bg-gray-300 mx-2"></div>
+
                     <select
                         value={job.status}
                         onChange={async (e) => {
@@ -166,7 +260,6 @@ const JobDetailsPage = () => {
                                         status: newStatus,
                                         notes: `Status updated to ${newStatus}`
                                     });
-                                    // Update local state immediately
                                     setJob(prev => ({ ...prev, status: newStatus }));
                                 } catch (err) {
                                     console.error("Failed to update status:", err);
@@ -180,10 +273,10 @@ const JobDetailsPage = () => {
                         <option value="indented">Indented</option>
                         <option value="waiting_for_parts">Waiting for Parts</option>
                         <option value="parts_received">Parts Received</option>
+                        <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
                         <option value="delivered">Delivered</option>
                         <option value="cancelled">Cancelled</option>
-
                     </select>
                 </div>
             </div>
@@ -267,6 +360,14 @@ const JobDetailsPage = () => {
                                         <span className="text-gray-500">Original Est. Date</span>
                                         <span className="font-medium text-gray-500 line-through">
                                             {new Date(job.original_estimated_delivery_date).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                )}
+                                {job.delay_reason && (
+                                    <div className="py-2 border-b border-gray-100">
+                                        <span className="text-gray-500 block mb-1">Delay Reason</span>
+                                        <span className="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                                            {job.delay_reason}
                                         </span>
                                     </div>
                                 )}
@@ -403,6 +504,79 @@ const JobDetailsPage = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modals */}
+            {modalType && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeModal}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <h3 className="text-lg font-bold text-gray-900">
+                                {modalType === 'edit' && 'Edit Job Details'}
+                                {modalType === 'delete' && 'Delete Job'}
+                                {modalType === 'delay' && 'Add Job Delay'}
+                            </h3>
+                            <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            {modalType === 'edit' && (
+                                <form onSubmit={handleUpdateJob} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Est. Cost</label>
+                                            <input type="number" step="0.01" value={formData.estimated_cost} onChange={e => setFormData({ ...formData, estimated_cost: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Est. Delivery</label>
+                                            <input type="date" value={formData.estimated_delivery_date?.split('T')[0]} onChange={e => setFormData({ ...formData, estimated_delivery_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                        <textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3"></textarea>
+                                    </div>
+                                    <div className="flex justify-end gap-3 mt-6">
+                                        <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {modalType === 'delete' && (
+                                <div>
+                                    <div className="flex items-center gap-4 mb-6 bg-red-50 p-4 rounded-xl text-red-700">
+                                        <AlertTriangle size={24} />
+                                        <p>Are you sure you want to delete this job? This action cannot be undone.</p>
+                                    </div>
+                                    <div className="flex justify-end gap-3">
+                                        <button onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                                        <button onClick={handleDeleteJob} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete Job</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {modalType === 'delay' && (
+                                <form onSubmit={handleDelayJob} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">New Delivery Date</label>
+                                        <input type="date" required value={formData.new_estimated_delivery_date?.split('T')[0]} onChange={e => setFormData({ ...formData, new_estimated_delivery_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Delay Reason</label>
+                                        <textarea required value={formData.delay_reason} onChange={e => setFormData({ ...formData, delay_reason: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3" placeholder="Explain why the job is delayed..."></textarea>
+                                    </div>
+                                    <div className="flex justify-end gap-3 mt-6">
+                                        <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                                        <button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">Add Delay</button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
