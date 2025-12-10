@@ -1,5 +1,6 @@
 import React from 'react';
 import { ClipboardList } from 'lucide-react';
+import CustomDatePicker from '../../common/CustomDatePicker';
 
 const ConditionNode = ({ node, level = 0, selectedIds, onToggle }) => {
     const isSelected = selectedIds.includes(node.id);
@@ -47,21 +48,6 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
                 </h3>
 
                 <div className="space-y-6">
-                    {/* Complaints Tree */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-4">Customer Complaints</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-xl border border-gray-200 max-h-[400px] overflow-y-auto">
-                            {complaintNodes && complaintNodes.map(node => (
-                                <ConditionNode
-                                    key={node.id}
-                                    node={node}
-                                    selectedIds={issues.complaint_node_ids || []}
-                                    onToggle={handleComplaintToggle}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
                     {/* Condition Tree */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-4">Watch Conditions & Issues</label>
@@ -72,6 +58,21 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
                                     node={node}
                                     selectedIds={issues.condition_node_ids}
                                     onToggle={handleConditionToggle}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Complaints Tree */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-4">Customer Complaints</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-xl border border-gray-200 max-h-[400px] overflow-y-auto">
+                            {complaintNodes && complaintNodes.map(node => (
+                                <ConditionNode
+                                    key={node.id}
+                                    node={node}
+                                    selectedIds={issues.complaint_node_ids || []}
+                                    onToggle={handleComplaintToggle}
                                 />
                             ))}
                         </div>
@@ -109,13 +110,12 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
 
                         {/* Estimated Delivery */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Delivery</label>
-                            <input
-                                type="date"
+                            <CustomDatePicker
+                                label="Estimated Delivery"
                                 name="estimated_delivery"
                                 value={issues.estimated_delivery}
                                 onChange={handleChange}
-                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all outline-none"
+                                placeholder="Select Delivery Date"
                             />
                         </div>
                     </div>

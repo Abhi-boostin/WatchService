@@ -1,5 +1,6 @@
 import React from 'react';
 import { Phone, Mail, User, Calendar, MapPin, Building, Globe } from 'lucide-react';
+import CustomDatePicker from '../../common/CustomDatePicker';
 
 const CustomerStep = ({ formData, handleChange, onPhoneBlur }) => {
     const { customer } = formData;
@@ -75,19 +76,13 @@ const CustomerStep = ({ formData, handleChange, onPhoneBlur }) => {
 
                     {/* DOB */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <Calendar className="h-4 w-4 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-                            </div>
-                            <input
-                                type="date"
-                                name="date_of_birth"
-                                value={customer.date_of_birth}
-                                onChange={handleChange}
-                                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all outline-none"
-                            />
-                        </div>
+                        <CustomDatePicker
+                            label="Date of Birth"
+                            name="date_of_birth"
+                            value={customer.date_of_birth}
+                            onChange={handleChange}
+                            placeholder="Select Date of Birth"
+                        />
                     </div>
 
                     {/* Gender */}

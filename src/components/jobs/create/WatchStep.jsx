@@ -1,5 +1,6 @@
 import React from 'react';
 import { Watch, Calendar } from 'lucide-react';
+import CustomDatePicker from '../../common/CustomDatePicker';
 
 const WatchStep = ({ formData, handleChange, brands }) => {
     const { watch } = formData;
@@ -62,19 +63,13 @@ const WatchStep = ({ formData, handleChange, brands }) => {
 
                     {/* Date of Purchase */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Date of Purchase</label>
-                        <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <Calendar className="h-4 w-4 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
-                            </div>
-                            <input
-                                type="date"
-                                name="date_of_purchase"
-                                value={watch.date_of_purchase}
-                                onChange={handleChange}
-                                className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all outline-none"
-                            />
-                        </div>
+                        <CustomDatePicker
+                            label="Date of Purchase"
+                            name="date_of_purchase"
+                            value={watch.date_of_purchase}
+                            onChange={handleChange}
+                            placeholder="Select Date of Purchase"
+                        />
                     </div>
 
                     {/* UCP Rate */}
