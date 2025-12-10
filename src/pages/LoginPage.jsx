@@ -26,11 +26,20 @@ const LoginPage = () => {
         try {
             const data = await authService.login(username, password);
             localStorage.setItem('token', data.access_token);
-            // Optionally store user info if returned
             navigate('/dashboard');
         } catch (err) {
             console.error("Login failed:", err);
-            setError('Invalid username or password. Please try again.');
+            if (err.response) {
+                if (err.response.status === 401) {
+                    setError('Invalid username or password.');
+                } else if (err.response.status === 404) {
+                    setError('User account not found.');
+                } else {
+                    setError('An error occurred. Please try again.');
+                }
+            } else {
+                setError('Network error. Please check your connection.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -129,12 +138,7 @@ const LoginPage = () => {
                         </button>
                     </form>
 
-                    <div className="text-center text-sm text-gray-500 font-light">
-                        Don't have an account?{' '}
-                        <a href="#" className="font-medium text-[#A68B5B] hover:text-[#8A734B]">
-                            Sign up
-                        </a>
-                    </div>
+
                 </div>
             </div>
 
