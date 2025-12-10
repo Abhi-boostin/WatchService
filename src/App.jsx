@@ -15,6 +15,7 @@ import SuppliersPage from './pages/SuppliersPage';
 import BrandsPage from './pages/BrandsPage';
 import IndentsPage from './pages/IndentsPage';
 import ServiceParametersPage from './pages/ServiceParametersPage';
+import ReportsPage from './pages/ReportsPage';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
             <Route path="/indents" element={<IndentsPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/brands" element={<BrandsPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings/service-parameters" element={<ServiceParametersPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             {/* Add other routes here later */}
