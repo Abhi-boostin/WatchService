@@ -340,15 +340,15 @@ const JobDetailsPage = () => {
                             <div className="space-y-4">
                                 <div className="flex justify-between py-2 border-b border-gray-100">
                                     <span className="text-gray-500">Estimated Cost</span>
-                                    <span className="font-medium text-gray-900">${job.estimated_cost || '0.00'}</span>
+                                    <span className="font-medium text-gray-900">₹{job.estimated_cost || '0.00'}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100">
                                     <span className="text-gray-500">Est. Parts Cost</span>
-                                    <span className="font-medium text-gray-900">${job.estimated_parts_cost || '0.00'}</span>
+                                    <span className="font-medium text-gray-900">₹{job.estimated_parts_cost || '0.00'}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100">
                                     <span className="text-gray-500">Est. Labour Cost</span>
-                                    <span className="font-medium text-gray-900">${job.estimated_labour_cost || '0.00'}</span>
+                                    <span className="font-medium text-gray-900">₹{job.estimated_labour_cost || '0.00'}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100">
                                     <span className="text-gray-500">Delivery Date</span>
@@ -405,7 +405,7 @@ const JobDetailsPage = () => {
                                     </div>
                                     <div className="flex justify-between py-2 border-b border-gray-100">
                                         <span className="text-gray-500">UCP Rate</span>
-                                        <span className="font-medium text-gray-900">${watch.ucp_rate || '0.00'}</span>
+                                        <span className="font-medium text-gray-900">₹{watch.ucp_rate || '0.00'}</span>
                                     </div>
                                 </div>
                                 <div className="col-span-1 md:col-span-2 mt-4">
