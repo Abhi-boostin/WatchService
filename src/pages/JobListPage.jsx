@@ -39,33 +39,68 @@ const JobListPage = () => {
     const fetchJobs = async () => {
         setLoading(true);
         try {
-            let query = `/api/v1/jobs?page=${page}&page_size=${pageSize}`;
-            if (search) query += `&search=${search}`;
-            if (statusFilter) query += `&status_filter=${statusFilter}`;
+            // Helper for sorting
+            const sortJobsList = (list) => {
+                return list.sort((a, b) => {
+                    if (sortBy === 'created_at_desc') {
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    } else if (sortBy === 'created_at_asc') {
+                        return new Date(a.created_at) - new Date(b.created_at);
+                    } else if (sortBy === 'delivery_date_asc') {
+                        if (!a.estimated_delivery_date) return 1;
+                        if (!b.estimated_delivery_date) return -1;
+                        return new Date(a.estimated_delivery_date) - new Date(b.estimated_delivery_date);
+                    } else if (sortBy === 'delivery_date_desc') {
+                        if (!a.estimated_delivery_date) return 1;
+                        if (!b.estimated_delivery_date) return -1;
+                        return new Date(b.estimated_delivery_date) - new Date(a.estimated_delivery_date);
+                    }
+                    return 0;
+                });
+            };
 
-            const response = await api.get(query);
-            let fetchedJobs = response.data.items || [];
+            if (search) {
+                // Composite Search: Customers + Jobs
+                const encodedSearch = encodeURIComponent(search);
 
-            // Client-side sorting
-            fetchedJobs.sort((a, b) => {
-                if (sortBy === 'created_at_desc') {
-                    return new Date(b.created_at) - new Date(a.created_at);
-                } else if (sortBy === 'created_at_asc') {
-                    return new Date(a.created_at) - new Date(b.created_at);
-                } else if (sortBy === 'delivery_date_asc') {
-                    if (!a.estimated_delivery_date) return 1;
-                    if (!b.estimated_delivery_date) return -1;
-                    return new Date(a.estimated_delivery_date) - new Date(b.estimated_delivery_date);
-                } else if (sortBy === 'delivery_date_desc') {
-                    if (!a.estimated_delivery_date) return 1;
-                    if (!b.estimated_delivery_date) return -1;
-                    return new Date(b.estimated_delivery_date) - new Date(a.estimated_delivery_date);
-                }
-                return 0;
-            });
+                // 1. Search Customers
+                const customersResponse = await api.get(`/api/v1/customers?search=${encodedSearch}`);
+                const matchingCustomers = customersResponse.data.items || [];
+                const customerIds = matchingCustomers.map(c => c.id);
 
-            setJobs(fetchedJobs);
-            setTotalPages(response.data.pages || 1);
+                // 2. Fetch jobs
+                const promises = [
+                    // Direct search
+                    api.get(`/api/v1/jobs?search=${encodedSearch}&page_size=100${statusFilter ? `&status_filter=${statusFilter}` : ''}`),
+                    // Customer matches (limit to top 5)
+                    ...customerIds.slice(0, 5).map(id =>
+                        api.get(`/api/v1/jobs?customer_id=${id}&page_size=100${statusFilter ? `&status_filter=${statusFilter}` : ''}`)
+                    )
+                ];
+
+                const responses = await Promise.all(promises);
+                let allJobs = [];
+                responses.forEach(res => {
+                    if (res.data.items) {
+                        allJobs = [...allJobs, ...res.data.items];
+                    }
+                });
+
+                // Deduplicate by ID
+                const uniqueJobs = Array.from(new Map(allJobs.map(job => [job.id, job])).values());
+
+                setJobs(sortJobsList(uniqueJobs));
+                setTotalPages(1);
+            } else {
+                // Standard Fetch
+                let query = `/api/v1/jobs?page=${page}&page_size=${pageSize}`;
+                if (statusFilter) query += `&status_filter=${statusFilter}`;
+
+                const response = await api.get(query);
+                let fetchedJobs = response.data.items || [];
+                setJobs(sortJobsList(fetchedJobs));
+                setTotalPages(response.data.pages || 1);
+            }
         } catch (error) {
             console.error("Error fetching jobs:", error);
             setJobs([]);
@@ -241,7 +276,7 @@ const JobListPage = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                         type="text"
-                        placeholder="Search by Job ID or Customer ID..."
+                        placeholder="Search by Job ID, Customer, Phone..."
                         value={search}
                         onChange={handleSearch}
                         className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all"
@@ -314,7 +349,10 @@ const JobListPage = () => {
                                                     <span className="font-mono text-sm font-medium text-gray-900">#{job.job_number || job.id}</span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-medium text-gray-900">Customer #{job.customer_id}</div>
+                                                    <div className="text-sm font-medium text-gray-900">{job.customer?.name || `Customer #${job.customer_id}`}</div>
+                                                    {job.customer?.contact_number && (
+                                                        <div className="text-xs text-gray-500">{job.customer.contact_number}</div>
+                                                    )}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <button
@@ -388,7 +426,7 @@ const JobListPage = () => {
                                     <div className="space-y-3 mb-6">
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <User size={16} className="text-gray-400" />
-                                            <span className="text-sm">Customer #{job.customer_id}</span>
+                                            <span className="text-sm">{job.customer?.name || `Customer #${job.customer_id}`}</span>
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Calendar size={16} className="text-gray-400" />
