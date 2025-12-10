@@ -225,27 +225,28 @@ const JobDetailsPage = () => {
                 </div>
 
                 {/* Actions */}
+                {/* Actions */}
                 <div className="flex items-center gap-3">
                     <button
                         onClick={openEditModal}
-                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200"
-                        title="Edit Job Details"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm font-medium"
                     >
-                        <Pencil size={20} />
+                        <Pencil size={18} />
+                        <span>Edit</span>
                     </button>
                     <button
                         onClick={openDelayModal}
-                        className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors border border-gray-200"
-                        title="Add Delay"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-orange-600 rounded-xl hover:bg-orange-50 hover:border-orange-200 transition-all shadow-sm font-medium"
                     >
-                        <Clock size={20} />
+                        <Clock size={18} />
+                        <span>Delay</span>
                     </button>
                     <button
                         onClick={openDeleteModal}
-                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-gray-200"
-                        title="Delete Job"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-red-600 rounded-xl hover:bg-red-50 hover:border-red-200 transition-all shadow-sm font-medium"
                     >
-                        <Trash2 size={20} />
+                        <Trash2 size={18} />
+                        <span>Delete</span>
                     </button>
 
                     <div className="h-8 w-px bg-gray-300 mx-2"></div>
@@ -267,7 +268,7 @@ const JobDetailsPage = () => {
                                 }
                             }
                         }}
-                        className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                     >
                         <option value="booked">Booked</option>
                         <option value="indented">Indented</option>
