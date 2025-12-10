@@ -16,9 +16,8 @@ import {
     ClipboardList,
     Tag,
     FileBarChart,
-    AlertTriangle,
-    CheckSquare,
-    UserCog
+    UserCog,
+    DollarSign
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActive }) => {
@@ -141,6 +140,7 @@ const Sidebar = () => {
                             onToggle={() => setIsSettingsOpen(!isSettingsOpen)}
                         >
                             <SidebarItem icon={ClipboardList} label="Service Parameters" to="/settings/service-parameters" />
+                            <SidebarItem icon={DollarSign} label="Pricing Rules" to="/settings/pricing-rules" />
                             <SidebarItem icon={UserCog} label="Users" to="/settings/users" />
                         </SidebarItem>
                     </div>
