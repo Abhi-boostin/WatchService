@@ -140,8 +140,7 @@ const Sidebar = () => {
                             isOpen={isSettingsOpen}
                             onToggle={() => setIsSettingsOpen(!isSettingsOpen)}
                         >
-                            <SidebarItem icon={AlertTriangle} label="Complaints" to="/settings/complaints" />
-                            <SidebarItem icon={CheckSquare} label="Conditions" to="/settings/conditions" />
+                            <SidebarItem icon={ClipboardList} label="Service Parameters" to="/settings/service-parameters" />
                             <SidebarItem icon={UserCog} label="Users" to="/settings/users" />
                         </SidebarItem>
                     </div>
