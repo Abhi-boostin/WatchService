@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, CheckSquare, Plus, ChevronRight, ChevronDown, Folder, FileText, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckSquare, Plus, ChevronRight, ChevronDown, Folder, FileText, Loader2, Pencil, Trash2 } from 'lucide-react';
 import api from '../services/api';
 
-const NodeItem = ({ node, level = 0 }) => {
+const NodeItem = ({ node, level = 0, onEdit, onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
     const hasChildren = node.children && node.children.length > 0;
 
     return (
         <div className="select-none">
             <div
-                className={`flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors ${level === 0 ? 'font-medium text-gray-900' : 'text-gray-600'}`}
+                className={`flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors group ${level === 0 ? 'font-medium text-gray-900' : 'text-gray-600'}`}
                 style={{ paddingLeft: `${level * 1.5 + 0.75}rem` }}
                 onClick={() => setIsOpen(!isOpen)}
             >
@@ -27,14 +27,31 @@ const NodeItem = ({ node, level = 0 }) => {
                     <FileText size={16} className="text-gray-400" />
                 )}
 
-                <span>{node.label}</span>
+                <span className="flex-1">{node.label}</span>
                 {node.code && <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded ml-2">{node.code}</span>}
+
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(node); }}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                        title="Edit"
+                    >
+                        <Pencil size={14} />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(node); }}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
             </div>
 
             {isOpen && hasChildren && (
                 <div className="animate-fadeIn">
                     {node.children.map(child => (
-                        <NodeItem key={child.id} node={child} level={level + 1} />
+                        <NodeItem key={child.id} node={child} level={level + 1} onEdit={onEdit} onDelete={onDelete} />
                     ))}
                 </div>
             )}
@@ -47,6 +64,7 @@ const ServiceParametersPage = () => {
     const [nodes, setNodes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [selectedNode, setSelectedNode] = useState(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -71,7 +89,7 @@ const ServiceParametersPage = () => {
         fetchNodes();
     }, [fetchNodes]);
 
-    const handleCreateNode = async (e) => {
+    const handleSaveNode = async (e) => {
         e.preventDefault();
         try {
             const endpoint = activeTab === 'complaints' ? '/api/v1/complaints/nodes' : '/api/v1/conditions/nodes';
@@ -80,14 +98,48 @@ const ServiceParametersPage = () => {
                 parent_id: formData.parent_id ? parseInt(formData.parent_id) : null
             };
 
-            await api.post(endpoint, payload);
+            if (selectedNode) {
+                await api.patch(`${endpoint}/${selectedNode.id}`, payload);
+            } else {
+                await api.post(endpoint, payload);
+            }
+
             fetchNodes();
             setShowModal(false);
             setFormData({ label: '', parent_id: '' });
+            setSelectedNode(null);
         } catch (error) {
-            console.error("Error creating node:", error);
-            alert("Failed to create item");
+            console.error("Error saving node:", error);
+            alert("Failed to save item");
         }
+    };
+
+    const handleEditNode = (node) => {
+        setSelectedNode(node);
+        setFormData({
+            label: node.label,
+            parent_id: node.parent_id || ''
+        });
+        setShowModal(true);
+    };
+
+    const handleDeleteNode = async (node) => {
+        if (!window.confirm(`Are you sure you want to delete "${node.label}"?`)) return;
+
+        try {
+            const endpoint = activeTab === 'complaints' ? `/api/v1/complaints/nodes/${node.id}` : `/api/v1/conditions/nodes/${node.id}`;
+            await api.delete(endpoint);
+            fetchNodes();
+        } catch (error) {
+            console.error("Error deleting node:", error);
+            alert("Failed to delete item");
+        }
+    };
+
+    const openCreateModal = () => {
+        setSelectedNode(null);
+        setFormData({ label: '', parent_id: '' });
+        setShowModal(true);
     };
 
     // Flatten nodes for parent selection dropdown
@@ -137,7 +189,7 @@ const ServiceParametersPage = () => {
                         Showing {nodes.length} root items
                     </div>
                     <button
-                        onClick={() => setShowModal(true)}
+                        onClick={openCreateModal}
                         className="flex items-center gap-2 px-4 py-2 bg-[#0F172A] text-white rounded-lg hover:bg-[#1E293B] transition-colors shadow-sm text-sm font-medium"
                     >
                         <Plus size={16} />
@@ -158,7 +210,7 @@ const ServiceParametersPage = () => {
                     ) : (
                         <div className="space-y-1">
                             {nodes.map(node => (
-                                <NodeItem key={node.id} node={node} />
+                                <NodeItem key={node.id} node={node} onEdit={handleEditNode} onDelete={handleDeleteNode} />
                             ))}
                         </div>
                     )}
@@ -171,10 +223,10 @@ const ServiceParametersPage = () => {
                     <div className="bg-white rounded-2xl shadow-xl max-w-md w-full" onClick={e => e.stopPropagation()}>
                         <div className="p-6 border-b border-gray-100">
                             <h3 className="text-lg font-bold text-gray-900">
-                                Add New {activeTab === 'complaints' ? 'Complaint' : 'Condition'}
+                                {selectedNode ? 'Edit' : 'Add New'} {activeTab === 'complaints' ? 'Complaint' : 'Condition'}
                             </h3>
                         </div>
-                        <form onSubmit={handleCreateNode} className="p-6 space-y-4">
+                        <form onSubmit={handleSaveNode} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Label / Name</label>
                                 <input
@@ -194,11 +246,13 @@ const ServiceParametersPage = () => {
                                     className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none bg-white"
                                 >
                                     <option value="">None (Create as Main Heading)</option>
-                                    {potentialParents.map(node => (
-                                        <option key={node.id} value={node.id}>
-                                            {node.label}
-                                        </option>
-                                    ))}
+                                    {potentialParents
+                                        .filter(p => !selectedNode || (p.id !== selectedNode.id)) // Simple cycle prevention: can't be own parent. Ideally should also exclude descendants.
+                                        .map(node => (
+                                            <option key={node.id} value={node.id}>
+                                                {node.label}
+                                            </option>
+                                        ))}
                                 </select>
                                 <p className="text-xs text-gray-500 mt-1">
                                     Select a parent to create a subheading, or leave empty for a main heading.
@@ -216,7 +270,7 @@ const ServiceParametersPage = () => {
                                     type="submit"
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                 >
-                                    Create Item
+                                    {selectedNode ? 'Save Changes' : 'Create Item'}
                                 </button>
                             </div>
                         </form>
