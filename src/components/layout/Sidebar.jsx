@@ -17,8 +17,7 @@ import {
     Tag,
     FileBarChart,
     UserCog,
-    DollarSign,
-    Package
+    DollarSign
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActive }) => {
