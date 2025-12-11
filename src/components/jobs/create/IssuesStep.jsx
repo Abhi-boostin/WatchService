@@ -1,50 +1,7 @@
 import React from 'react';
 import { ClipboardList } from 'lucide-react';
 import CustomDatePicker from '../../common/CustomDatePicker';
-
-const ConditionNode = ({ node, level = 0, selectedIds, onToggle }) => {
-    const isSelected = selectedIds.includes(node.id);
-    const hasChildren = node.children && node.children.length > 0;
-
-    if (hasChildren) {
-        return (
-            <div className={`ml-${level * 4} mb-2`}>
-                <div className="p-2">
-                    <span className={`text-sm font-semibold text-gray-900`}>
-                        {node.label}
-                    </span>
-                </div>
-                <div className="ml-6 mt-1 border-l-2 border-gray-100 pl-2">
-                    {node.children.map(child => (
-                        <ConditionNode
-                            key={child.id}
-                            node={child}
-                            level={level + 1}
-                            selectedIds={selectedIds}
-                            onToggle={onToggle}
-                        />
-                    ))}
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className={`ml-${level * 4} mb-2`}>
-            <label className={`flex items-center space-x-3 p-2 rounded-lg transition-colors cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'} border border-transparent`}>
-                <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => onToggle(node.id)}
-                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">
-                    {node.label}
-                </span>
-            </label>
-        </div>
-    );
-};
+import HierarchicalNodeSelector from '../../common/HierarchicalNodeSelector';
 
 const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, handleConditionToggle, handleComplaintToggle, onCalculateCost, costBreakdown, isCalculating }) => {
     const { issues } = formData;
@@ -59,34 +16,22 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
 
                 <div className="space-y-6">
                     {/* Condition Tree */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-4">Watch Conditions & Issues</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-xl border border-gray-200 max-h-[400px] overflow-y-auto">
-                            {conditionNodes && conditionNodes.map(node => (
-                                <ConditionNode
-                                    key={node.id}
-                                    node={node}
-                                    selectedIds={issues.condition_node_ids}
-                                    onToggle={handleConditionToggle}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                    <HierarchicalNodeSelector
+                        nodes={conditionNodes}
+                        selectedIds={issues.condition_node_ids}
+                        onToggle={handleConditionToggle}
+                        label="Watch Conditions & Issues"
+                        emptyMessage="No conditions available"
+                    />
 
                     {/* Complaints Tree */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-4">Customer Complaints</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-xl border border-gray-200 max-h-[400px] overflow-y-auto">
-                            {complaintNodes && complaintNodes.map(node => (
-                                <ConditionNode
-                                    key={node.id}
-                                    node={node}
-                                    selectedIds={issues.complaint_node_ids || []}
-                                    onToggle={handleComplaintToggle}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                    <HierarchicalNodeSelector
+                        nodes={complaintNodes}
+                        selectedIds={issues.complaint_node_ids || []}
+                        onToggle={handleComplaintToggle}
+                        label="Customer Complaints"
+                        emptyMessage="No complaints available"
+                    />
 
                     {/* Other Issues */}
                     <div>

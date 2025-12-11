@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, User, Watch, AlertTriangle, Image as ImageIcon,
     Calendar, DollarSign, Clock, CheckCircle, XCircle,
-    MessageSquare, ClipboardCheck, Pencil, Trash2, X
+    MessageSquare, ClipboardCheck, Pencil, Trash2, X, ClipboardList
 } from 'lucide-react';
 import api from '../services/api';
+import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelector';
 
 const JobDetailsPage = () => {
     const { id } = useParams();
@@ -26,17 +27,7 @@ const JobDetailsPage = () => {
     const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay'
     const [editTab, setEditTab] = useState('job'); // 'job', 'watch', 'customer', 'issues'
     const [formData, setFormData] = useState({});
-
-    const flattenNodes = (nodes, depth = 0) => {
-        let result = [];
-        nodes.forEach(node => {
-            result.push({ ...node, depth });
-            if (node.children && node.children.length > 0) {
-                result = result.concat(flattenNodes(node.children, depth + 1));
-            }
-        });
-        return result;
-    };
+    const [isRecalculating, setIsRecalculating] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -110,18 +101,18 @@ const JobDetailsPage = () => {
                     console.warn("Error fetching brands:", err);
                 }
 
-                // 7. Fetch Complaint Nodes
+                // 7. Fetch Complaint Nodes (keep as tree structure)
                 try {
                     const compNodesRes = await api.get('/api/v1/complaints/nodes');
-                    if (mounted) setAvailableComplaints(flattenNodes(compNodesRes.data));
+                    if (mounted) setAvailableComplaints(compNodesRes.data);
                 } catch (err) {
                     console.warn("Error fetching complaint nodes:", err);
                 }
 
-                // 8. Fetch Condition Nodes
+                // 8. Fetch Condition Nodes (keep as tree structure)
                 try {
                     const condNodesRes = await api.get('/api/v1/conditions/nodes');
-                    if (mounted) setAvailableConditions(flattenNodes(condNodesRes.data));
+                    if (mounted) setAvailableConditions(condNodesRes.data);
                 } catch (err) {
                     console.warn("Error fetching condition nodes:", err);
                 }
@@ -201,6 +192,23 @@ const JobDetailsPage = () => {
     const closeModal = () => {
         setModalType(null);
         setFormData({});
+    };
+
+    // Toggle handlers for hierarchical node selection
+    const handleComplaintToggle = (nodeId) => {
+        const currentIds = formData.selected_complaint_ids || [];
+        const newIds = currentIds.includes(nodeId)
+            ? currentIds.filter(id => id !== nodeId)
+            : [...currentIds, nodeId];
+        setFormData({ ...formData, selected_complaint_ids: newIds });
+    };
+
+    const handleConditionToggle = (nodeId) => {
+        const currentIds = formData.selected_condition_ids || [];
+        const newIds = currentIds.includes(nodeId)
+            ? currentIds.filter(id => id !== nodeId)
+            : [...currentIds, nodeId];
+        setFormData({ ...formData, selected_condition_ids: newIds });
     };
 
     const handleUpdateJob = async (e) => {
@@ -324,6 +332,39 @@ const JobDetailsPage = () => {
         }
     };
 
+    const handleRecalculatePricing = async () => {
+        if (!job || !watch) {
+            alert("Job or watch information is not available.");
+            return;
+        }
+        
+        try {
+            setIsRecalculating(true);
+            const response = await api.post(`/api/v1/jobs/${id}/recalculate-pricing`, {
+                apply_to_job: true
+            });
+            
+            // Update the job with new pricing
+            if (response.data && response.data.estimate) {
+                const estimate = response.data.estimate;
+                setJob(prev => ({
+                    ...prev,
+                    estimated_cost: estimate.estimated_total,
+                    estimated_parts_cost: estimate.total_parts_cost,
+                    estimated_labour_cost: estimate.total_labour_cost
+                }));
+                alert(`Pricing recalculated successfully!\nEstimated Total: ₹${parseFloat(estimate.estimated_total).toFixed(2)}`);
+            } else {
+                alert("Pricing recalculated successfully!");
+            }
+        } catch (error) {
+            console.error("Error recalculating pricing:", error);
+            alert("Failed to recalculate pricing. Please try again.");
+        } finally {
+            setIsRecalculating(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -346,86 +387,132 @@ const JobDetailsPage = () => {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('/jobs')}
-                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                        <ArrowLeft size={24} className="text-gray-600" />
-                    </button>
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold text-gray-900">Job #{job.job_number || job.id}</h1>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize
-                                ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                    job.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                                    job.status === 'indented' || job.status === 'parts_received' ? 'bg-blue-100 text-blue-800' :
-                                    job.status === 'booked' ? 'bg-yellow-100 text-yellow-800' :
-                                    job.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                        'bg-gray-100 text-gray-800'}`}>
-                                {job.status.replace(/_/g, ' ')}
-                            </span>
+            <div className="mb-8">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
+                    {/* Title Section */}
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate('/jobs')}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                            <ArrowLeft size={24} className="text-gray-600" />
+                        </button>
+                        <div>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h1 className="text-2xl font-bold text-gray-900">Job #{job.job_number || job.id}</h1>
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize
+                                    ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                        job.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                        job.status === 'indented' || job.status === 'parts_received' ? 'bg-blue-100 text-blue-800' :
+                                        job.status === 'booked' ? 'bg-yellow-100 text-yellow-800' :
+                                        job.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                            'bg-gray-100 text-gray-800'}`}>
+                                    {job.status.replace(/_/g, ' ')}
+                                </span>
+                            </div>
+                            <p className="text-gray-500 mt-1">
+                                Created on {new Date(job.created_at).toLocaleDateString()}
+                            </p>
                         </div>
-                        <p className="text-gray-500 mt-1">
-                            Created on {new Date(job.created_at).toLocaleDateString()}
-                        </p>
+                    </div>
+
+                    {/* Status Dropdown - Visible on larger screens */}
+                    <div className="hidden lg:block">
+                        <label className="block text-xs text-gray-500 mb-1 font-medium">Update Status</label>
+                        <select
+                            value={job.status}
+                            onChange={async (e) => {
+                                const newStatus = e.target.value;
+                                if (window.confirm(`Are you sure you want to change status to ${newStatus}?`)) {
+                                    try {
+                                        await api.post(`/api/v1/jobs/${job.id}/status`, {
+                                            status: newStatus,
+                                            notes: `Status updated to ${newStatus}`
+                                        });
+                                        setJob(prev => ({ ...prev, status: newStatus }));
+                                    } catch (err) {
+                                        console.error("Failed to update status:", err);
+                                        alert("Failed to update status");
+                                    }
+                                }
+                            }}
+                            className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors min-w-[180px]"
+                        >
+                            <option value="booked">Booked</option>
+                            <option value="indented">Indented</option>
+                            <option value="parts_received">Parts Received</option>
+                            <option value="completed">Completed</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
                     </div>
                 </div>
 
-                {/* Actions */}
-                {/* Actions */}
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={openEditModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm font-medium"
-                    >
-                        <Pencil size={18} />
-                        <span>Edit</span>
-                    </button>
-                    <button
-                        onClick={openDelayModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-orange-600 rounded-xl hover:bg-orange-50 hover:border-orange-200 transition-all shadow-sm font-medium"
-                    >
-                        <Clock size={18} />
-                        <span>Delay</span>
-                    </button>
-                    <button
-                        onClick={openDeleteModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-red-600 rounded-xl hover:bg-red-50 hover:border-red-200 transition-all shadow-sm font-medium"
-                    >
-                        <Trash2 size={18} />
-                        <span>Delete</span>
-                    </button>
+                {/* Actions Row */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                    {/* Primary Actions */}
+                    <div className="flex flex-wrap gap-2 flex-1">
+                        <button
+                            onClick={openEditModal}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm font-medium text-sm"
+                        >
+                            <Pencil size={16} />
+                            <span>Edit</span>
+                        </button>
+                        <button
+                            onClick={handleRecalculatePricing}
+                            disabled={isRecalculating}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-blue-600 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                            <DollarSign size={16} />
+                            <span className="hidden sm:inline">{isRecalculating ? 'Calculating...' : 'Recalculate'}</span>
+                            <span className="sm:hidden">Price</span>
+                        </button>
+                        <button
+                            onClick={openDelayModal}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-orange-600 rounded-xl hover:bg-orange-50 hover:border-orange-200 transition-all shadow-sm font-medium text-sm"
+                        >
+                            <Clock size={16} />
+                            <span>Delay</span>
+                        </button>
+                        <button
+                            onClick={openDeleteModal}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-red-600 rounded-xl hover:bg-red-50 hover:border-red-200 transition-all shadow-sm font-medium text-sm"
+                        >
+                            <Trash2 size={16} />
+                            <span>Delete</span>
+                        </button>
+                    </div>
 
-                    <div className="h-8 w-px bg-gray-300 mx-2"></div>
-
-                    <select
-                        value={job.status}
-                        onChange={async (e) => {
-                            const newStatus = e.target.value;
-                            if (window.confirm(`Are you sure you want to change status to ${newStatus}?`)) {
-                                try {
-                                    await api.post(`/api/v1/jobs/${job.id}/status`, {
-                                        status: newStatus,
-                                        notes: `Status updated to ${newStatus}`
-                                    });
-                                    setJob(prev => ({ ...prev, status: newStatus }));
-                                } catch (err) {
-                                    console.error("Failed to update status:", err);
-                                    alert("Failed to update status");
+                    {/* Status Dropdown - Mobile/Tablet */}
+                    <div className="lg:hidden">
+                        <select
+                            value={job.status}
+                            onChange={async (e) => {
+                                const newStatus = e.target.value;
+                                if (window.confirm(`Are you sure you want to change status to ${newStatus}?`)) {
+                                    try {
+                                        await api.post(`/api/v1/jobs/${job.id}/status`, {
+                                            status: newStatus,
+                                            notes: `Status updated to ${newStatus}`
+                                        });
+                                        setJob(prev => ({ ...prev, status: newStatus }));
+                                    } catch (err) {
+                                        console.error("Failed to update status:", err);
+                                        alert("Failed to update status");
+                                    }
                                 }
-                            }
-                        }}
-                        className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
-                    >
-                        <option value="booked">Booked</option>
-                        <option value="indented">Indented</option>
-                        <option value="parts_received">Parts Received</option>
-                        <option value="completed">Completed</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
+                            }}
+                            className="w-full sm:w-auto px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                        >
+                            <option value="booked">Status: Booked</option>
+                            <option value="indented">Status: Indented</option>
+                            <option value="parts_received">Status: Parts Received</option>
+                            <option value="completed">Status: Completed</option>
+                            <option value="delivered">Status: Delivered</option>
+                            <option value="cancelled">Status: Cancelled</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -656,7 +743,7 @@ const JobDetailsPage = () => {
             {/* Modals */}
             {modalType && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeModal}>
-                    <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                             <h3 className="text-lg font-bold text-gray-900">
                                 {modalType === 'edit' && 'Edit Job Details'}
@@ -771,54 +858,31 @@ const JobDetailsPage = () => {
                                     )}
 
                                     {editTab === 'issues' && (
-                                        <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
-                                            <div>
-                                                <h4 className="font-medium text-gray-900 mb-3 sticky top-0 bg-white py-2 border-b border-gray-100">Complaints</h4>
-                                                <div className="space-y-2">
-                                                    {availableComplaints.map(node => (
-                                                        <label key={node.id} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={formData.selected_complaint_ids.includes(node.id)}
-                                                                onChange={(e) => {
-                                                                    const newIds = e.target.checked
-                                                                        ? [...formData.selected_complaint_ids, node.id]
-                                                                        : formData.selected_complaint_ids.filter(id => id !== node.id);
-                                                                    setFormData({ ...formData, selected_complaint_ids: newIds });
-                                                                }}
-                                                                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                            />
-                                                            <div className="text-sm">
-                                                                <span className="font-medium text-gray-900">{node.label}</span>
-                                                                {node.code && <span className="text-gray-500 ml-2 text-xs">({node.code})</span>}
-                                                            </div>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            </div>
+                                        <div className="space-y-6">
+                                            <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                                                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                                    <ClipboardList className="w-4 h-4 text-blue-600" />
+                                                    Service Requirements & Conditions
+                                                </h3>
 
-                                            <div>
-                                                <h4 className="font-medium text-gray-900 mb-3 sticky top-0 bg-white py-2 border-b border-gray-100">Conditions</h4>
-                                                <div className="space-y-2">
-                                                    {availableConditions.map(node => (
-                                                        <label key={node.id} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={formData.selected_condition_ids.includes(node.id)}
-                                                                onChange={(e) => {
-                                                                    const newIds = e.target.checked
-                                                                        ? [...formData.selected_condition_ids, node.id]
-                                                                        : formData.selected_condition_ids.filter(id => id !== node.id);
-                                                                    setFormData({ ...formData, selected_condition_ids: newIds });
-                                                                }}
-                                                                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                                            />
-                                                            <div className="text-sm">
-                                                                <span className="font-medium text-gray-900">{node.label}</span>
-                                                                {node.code && <span className="text-gray-500 ml-2 text-xs">({node.code})</span>}
-                                                            </div>
-                                                        </label>
-                                                    ))}
+                                                <div className="space-y-6">
+                                                    {/* Condition Tree */}
+                                                    <HierarchicalNodeSelector
+                                                        nodes={availableConditions}
+                                                        selectedIds={formData.selected_condition_ids || []}
+                                                        onToggle={handleConditionToggle}
+                                                        label="Watch Conditions & Issues"
+                                                        emptyMessage="No conditions available"
+                                                    />
+
+                                                    {/* Complaints Tree */}
+                                                    <HierarchicalNodeSelector
+                                                        nodes={availableComplaints}
+                                                        selectedIds={formData.selected_complaint_ids || []}
+                                                        onToggle={handleComplaintToggle}
+                                                        label="Customer Complaints"
+                                                        emptyMessage="No complaints available"
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
