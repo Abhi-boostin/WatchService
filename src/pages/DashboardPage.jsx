@@ -27,12 +27,14 @@ const DashboardPage = () => {
             // We use page_size=1 because we only care about the 'total' in the metadata
             const [
                 allJobsRes,
-                inProgressRes,
+                indentedRes,
+                partsReceivedRes,
                 completedRes,
                 bookedRes
             ] = await Promise.all([
                 api.get('/api/v1/jobs?page=1&page_size=1'),
-                api.get('/api/v1/jobs?page=1&page_size=1&status_filter=in_progress'),
+                api.get('/api/v1/jobs?page=1&page_size=1&status_filter=indented'),
+                api.get('/api/v1/jobs?page=1&page_size=1&status_filter=parts_received'),
                 api.get('/api/v1/jobs?page=1&page_size=1&status_filter=completed'),
                 api.get('/api/v1/jobs?page=1&page_size=1&status_filter=booked')
             ]);
@@ -43,10 +45,10 @@ const DashboardPage = () => {
             setRecentJobs(recentJobsRes.data.items);
 
             setStats({
-                total: allJobsRes.data.total,
-                inProgress: inProgressRes.data.total,
-                completed: completedRes.data.total,
-                pending: bookedRes.data.total
+                total: allJobsRes.data.pagination.total,
+                inProgress: indentedRes.data.pagination.total + partsReceivedRes.data.pagination.total,
+                completed: completedRes.data.pagination.total,
+                pending: bookedRes.data.pagination.total
             });
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
@@ -159,7 +161,10 @@ const DashboardPage = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
                                                 ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                    job.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                                    job.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                                    job.status === 'indented' || job.status === 'parts_received' ? 'bg-blue-100 text-blue-800' :
+                                                    job.status === 'booked' ? 'bg-yellow-100 text-yellow-800' :
+                                                    job.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                                         'bg-gray-100 text-gray-800'}`}>
                                                 {job.status.replace('_', ' ')}
                                             </span>

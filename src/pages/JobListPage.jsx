@@ -227,10 +227,10 @@ const JobListPage = () => {
     const getStatusColor = (status) => {
         switch (status) {
             case 'completed': return 'bg-green-50 text-green-700 border-green-100';
+            case 'delivered': return 'bg-green-50 text-green-700 border-green-100';
             case 'indented': return 'bg-blue-50 text-blue-700 border-blue-100';
             case 'parts_received': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
-            case 'waiting_for_parts': return 'bg-orange-50 text-orange-700 border-orange-100';
-            case 'delivered': return 'bg-purple-50 text-purple-700 border-purple-100';
+            case 'booked': return 'bg-yellow-50 text-yellow-700 border-yellow-100';
             case 'cancelled': return 'bg-red-50 text-red-700 border-red-100';
             default: return 'bg-gray-50 text-gray-700 border-gray-100';
         }
@@ -585,7 +585,6 @@ const JobListPage = () => {
                                             <option value="booked">Booked</option>
                                             <option value="indented">Indented</option>
                                             <option value="parts_received">Parts Received</option>
-                                            <option value="in_progress">In Progress</option>
                                             <option value="completed">Completed</option>
                                             <option value="delivered">Delivered</option>
                                             <option value="cancelled">Cancelled</option>

@@ -359,7 +359,10 @@ const JobDetailsPage = () => {
                             <h1 className="text-2xl font-bold text-gray-900">Job #{job.job_number || job.id}</h1>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize
                                 ${job.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                    job.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                    job.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                                    job.status === 'indented' || job.status === 'parts_received' ? 'bg-blue-100 text-blue-800' :
+                                    job.status === 'booked' ? 'bg-yellow-100 text-yellow-800' :
+                                    job.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                         'bg-gray-100 text-gray-800'}`}>
                                 {job.status.replace(/_/g, ' ')}
                             </span>
@@ -418,9 +421,7 @@ const JobDetailsPage = () => {
                     >
                         <option value="booked">Booked</option>
                         <option value="indented">Indented</option>
-                        <option value="waiting_for_parts">Waiting for Parts</option>
                         <option value="parts_received">Parts Received</option>
-                        <option value="in_progress">In Progress</option>
                         <option value="completed">Completed</option>
                         <option value="delivered">Delivered</option>
                         <option value="cancelled">Cancelled</option>
