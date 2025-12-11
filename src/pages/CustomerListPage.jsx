@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Phone, Mail, MapPin, Plus, Loader2, Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Search, User, Phone, Mail, MapPin, Plus, Loader2, Trash2, X, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
+import CustomDatePicker from '../components/common/CustomDatePicker';
 
 const CustomerListPage = () => {
     const navigate = useNavigate();
@@ -37,24 +38,6 @@ const CustomerListPage = () => {
     );
 
     // Actions
-    const openEditModal = (customer, e) => {
-        e.stopPropagation();
-        setSelectedCustomer(customer);
-        setFormData({
-            name: customer.name,
-            contact_number: customer.contact_number,
-            email: customer.email,
-            address: customer.address,
-            city: customer.city,
-            state: customer.state,
-            country: customer.country,
-            postal_code: customer.postal_code,
-            date_of_birth: customer.date_of_birth,
-            gender: customer.gender
-        });
-        setModalType('edit');
-    };
-
     const openDeleteModal = (customer, e) => {
         e.stopPropagation();
         setSelectedCustomer(customer);
@@ -86,24 +69,20 @@ const CustomerListPage = () => {
     const handleCreateCustomer = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/api/v1/customers', formData);
+            // Filter out empty strings for optional fields to avoid validation errors
+            const customerData = { ...formData };
+            Object.keys(customerData).forEach(key => {
+                if (customerData[key] === '' || customerData[key] === null || customerData[key] === undefined) {
+                    delete customerData[key];
+                }
+            });
+            
+            await api.post('/api/v1/customers', customerData);
             fetchCustomers();
             closeModal();
         } catch (error) {
             console.error("Error creating customer:", error);
             alert("Failed to create customer");
-        }
-    };
-
-    const handleUpdateCustomer = async (e) => {
-        e.preventDefault();
-        try {
-            await api.patch(`/api/v1/customers/${selectedCustomer.id}`, formData);
-            fetchCustomers();
-            closeModal();
-        } catch (error) {
-            console.error("Error updating customer:", error);
-            alert("Failed to update customer");
         }
     };
 
@@ -171,13 +150,6 @@ const CustomerListPage = () => {
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
-                                        onClick={(e) => openEditModal(customer, e)}
-                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                        title="Edit Customer"
-                                    >
-                                        <Pencil size={18} />
-                                    </button>
-                                    <button
                                         onClick={(e) => openDeleteModal(customer, e)}
                                         className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                         title="Delete Customer"
@@ -220,7 +192,6 @@ const CustomerListPage = () => {
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                             <h3 className="text-lg font-bold text-gray-900">
                                 {modalType === 'create' && 'Add Customer'}
-                                {modalType === 'edit' && 'Edit Customer'}
                                 {modalType === 'delete' && 'Delete Customer'}
                             </h3>
                             <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
@@ -229,8 +200,8 @@ const CustomerListPage = () => {
                         </div>
 
                         <div className="p-6">
-                            {(modalType === 'edit' || modalType === 'create') && (
-                                <form onSubmit={modalType === 'create' ? handleCreateCustomer : handleUpdateCustomer} className="space-y-4">
+                            {modalType === 'create' && (
+                                <form onSubmit={handleCreateCustomer} className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                                         <input type="text" required value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
@@ -269,10 +240,34 @@ const CustomerListPage = () => {
                                             <input type="text" value={formData.postal_code || ''} onChange={e => setFormData({ ...formData, postal_code: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
                                         </div>
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <CustomDatePicker
+                                                label="Date of Birth"
+                                                name="date_of_birth"
+                                                value={formData.date_of_birth || ''}
+                                                onChange={e => setFormData({ ...formData, date_of_birth: e.target.value })}
+                                                placeholder="Select Date of Birth"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                                            <select
+                                                value={formData.gender || ''}
+                                                onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-lg border border-gray-200"
+                                            >
+                                                <option value="">Select Gender</option>
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <div className="flex justify-end gap-3 mt-6">
                                         <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
                                         <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                            {modalType === 'create' ? 'Create Customer' : 'Save Changes'}
+                                            Create Customer
                                         </button>
                                     </div>
                                 </form>

@@ -18,10 +18,25 @@ const JobDetailsPage = () => {
     const [conditions, setConditions] = useState([]);
     const [complaints, setComplaints] = useState([]);
     const [attachments, setAttachments] = useState([]);
+    const [brands, setBrands] = useState([]);
+    const [availableComplaints, setAvailableComplaints] = useState([]);
+    const [availableConditions, setAvailableConditions] = useState([]);
 
     // Modal States
     const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay'
+    const [editTab, setEditTab] = useState('job'); // 'job', 'watch', 'customer', 'issues'
     const [formData, setFormData] = useState({});
+
+    const flattenNodes = (nodes, depth = 0) => {
+        let result = [];
+        nodes.forEach(node => {
+            result.push({ ...node, depth });
+            if (node.children && node.children.length > 0) {
+                result = result.concat(flattenNodes(node.children, depth + 1));
+            }
+        });
+        return result;
+    };
 
     useEffect(() => {
         let mounted = true;
@@ -87,6 +102,30 @@ const JobDetailsPage = () => {
                     }
                 }
 
+                // 6. Fetch Brands (for editing)
+                try {
+                    const brandsRes = await api.get('/api/v1/brands/all');
+                    if (mounted) setBrands(brandsRes.data);
+                } catch (err) {
+                    console.warn("Error fetching brands:", err);
+                }
+
+                // 7. Fetch Complaint Nodes
+                try {
+                    const compNodesRes = await api.get('/api/v1/complaints/nodes');
+                    if (mounted) setAvailableComplaints(flattenNodes(compNodesRes.data));
+                } catch (err) {
+                    console.warn("Error fetching complaint nodes:", err);
+                }
+
+                // 8. Fetch Condition Nodes
+                try {
+                    const condNodesRes = await api.get('/api/v1/conditions/nodes');
+                    if (mounted) setAvailableConditions(flattenNodes(condNodesRes.data));
+                } catch (err) {
+                    console.warn("Error fetching condition nodes:", err);
+                }
+
             } catch (error) {
                 console.error("Error fetching job details:", error);
             } finally {
@@ -113,6 +152,7 @@ const JobDetailsPage = () => {
     // Actions
     const openEditModal = () => {
         setFormData({
+            // Job Fields
             estimated_cost: job.estimated_cost,
             estimated_parts_cost: job.estimated_parts_cost,
             estimated_labour_cost: job.estimated_labour_cost,
@@ -122,8 +162,27 @@ const JobDetailsPage = () => {
             additional_charge_note: job.additional_charge_note,
             actual_cost: job.actual_cost,
             estimated_delivery_date: job.estimated_delivery_date,
-            notes: job.notes
+            notes: job.notes,
+
+            // Watch Fields
+            brand_id: watch?.brand_id || '',
+            model_number: watch?.model_number || '',
+            watch_serial_number: watch?.watch_serial_number || '',
+            other_remarks: watch?.other_remarks || '',
+            ucp_rate: watch?.ucp_rate || '',
+            date_of_purchase: watch?.date_of_purchase || '',
+
+            // Customer Fields
+            customer_name: customer?.name || '',
+            customer_contact: customer?.contact_number || '',
+            customer_email: customer?.email || '',
+            customer_address: customer?.address || '',
+
+            // Issues Fields (IDs only for selection)
+            selected_complaint_ids: complaints.map(c => c.complaint_node_id),
+            selected_condition_ids: conditions.map(c => c.condition_node_id)
         });
+        setEditTab('job');
         setModalType('edit');
     };
 
@@ -147,12 +206,99 @@ const JobDetailsPage = () => {
     const handleUpdateJob = async (e) => {
         e.preventDefault();
         try {
-            const response = await api.patch(`/api/v1/jobs/${id}`, formData);
-            setJob(response.data);
+            // 1. Update Job
+            const jobData = {
+                estimated_cost: formData.estimated_cost,
+                estimated_parts_cost: formData.estimated_parts_cost,
+                estimated_labour_cost: formData.estimated_labour_cost,
+                deduction: formData.deduction,
+                deduction_note: formData.deduction_note,
+                additional_charge: formData.additional_charge,
+                additional_charge_note: formData.additional_charge_note,
+                actual_cost: formData.actual_cost,
+                estimated_delivery_date: formData.estimated_delivery_date,
+                notes: formData.notes
+            };
+            const jobRes = await api.patch(`/api/v1/jobs/${id}`, jobData);
+            setJob(jobRes.data);
+
+            // 2. Update Watch (if exists)
+            if (watch) {
+                const watchData = {
+                    brand_id: formData.brand_id,
+                    model_number: formData.model_number,
+                    watch_serial_number: formData.watch_serial_number,
+                    other_remarks: formData.other_remarks,
+                    ucp_rate: formData.ucp_rate,
+                    date_of_purchase: formData.date_of_purchase
+                };
+                const watchRes = await api.patch(`/api/v1/watches/${watch.id}`, watchData);
+                setWatch(watchRes.data);
+
+                // 3. Update Issues (Complaints)
+                const currentComplaintIds = complaints.map(c => c.complaint_node_id);
+                const newComplaintIds = formData.selected_complaint_ids.map(Number);
+
+                const complaintsToAdd = newComplaintIds.filter(id => !currentComplaintIds.includes(id));
+                const complaintsToRemove = complaints.filter(c => !newComplaintIds.includes(c.complaint_node_id));
+
+                // Add new complaints
+                for (const nodeId of complaintsToAdd) {
+                    await api.post('/api/v1/complaints/watch-complaints', {
+                        watch_id: watch.id,
+                        complaint_node_id: nodeId
+                    });
+                }
+                // Remove deselected complaints
+                for (const item of complaintsToRemove) {
+                    await api.delete(`/api/v1/complaints/watch-complaints/${item.id}`);
+                }
+
+                // Refresh complaints
+                const updatedComplaints = await api.get(`/api/v1/complaints/watch-complaints/watch/${watch.id}`);
+                setComplaints(updatedComplaints.data);
+
+
+                // 4. Update Issues (Conditions)
+                const currentConditionIds = conditions.map(c => c.condition_node_id);
+                const newConditionIds = formData.selected_condition_ids.map(Number);
+
+                const conditionsToAdd = newConditionIds.filter(id => !currentConditionIds.includes(id));
+                const conditionsToRemove = conditions.filter(c => !newConditionIds.includes(c.condition_node_id));
+
+                // Add new conditions
+                for (const nodeId of conditionsToAdd) {
+                    await api.post('/api/v1/conditions/watch-conditions', {
+                        watch_id: watch.id,
+                        condition_node_id: nodeId
+                    });
+                }
+                // Remove deselected conditions
+                for (const item of conditionsToRemove) {
+                    await api.delete(`/api/v1/conditions/watch-conditions/${item.id}`);
+                }
+
+                // Refresh conditions
+                const updatedConditions = await api.get(`/api/v1/conditions/watch-conditions/watch/${watch.id}`);
+                setConditions(updatedConditions.data);
+            }
+
+            // 5. Update Customer (if exists)
+            if (customer) {
+                const customerData = {
+                    name: formData.customer_name,
+                    contact_number: formData.customer_contact,
+                    email: formData.customer_email,
+                    address: formData.customer_address
+                };
+                const customerRes = await api.patch(`/api/v1/customers/${customer.id}`, customerData);
+                setCustomer(customerRes.data);
+            }
+
             closeModal();
         } catch (error) {
-            console.error("Error updating job:", error);
-            alert("Failed to update job");
+            console.error("Error updating details:", error);
+            alert("Failed to update details");
         }
     };
 
@@ -524,21 +670,160 @@ const JobDetailsPage = () => {
                         <div className="p-6">
                             {modalType === 'edit' && (
                                 <form onSubmit={handleUpdateJob} className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Est. Cost</label>
-                                            <input type="number" step="0.01" value={formData.estimated_cost} onChange={e => setFormData({ ...formData, estimated_cost: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Est. Delivery</label>
-                                            <input type="date" value={formData.estimated_delivery_date?.split('T')[0]} onChange={e => setFormData({ ...formData, estimated_delivery_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
-                                        </div>
+                                    {/* Edit Tabs */}
+                                    <div className="flex border-b border-gray-200 mb-4 overflow-x-auto">
+                                        {['job', 'watch', 'customer', 'issues'].map(tab => (
+                                            <button
+                                                key={tab}
+                                                type="button"
+                                                onClick={() => setEditTab(tab)}
+                                                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors capitalize whitespace-nowrap px-4
+                                                    ${editTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                                            >
+                                                {tab} Details
+                                            </button>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                        <textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3"></textarea>
-                                    </div>
-                                    <div className="flex justify-end gap-3 mt-6">
+
+                                    {editTab === 'job' && (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Est. Cost</label>
+                                                    <input type="number" step="0.01" value={formData.estimated_cost} onChange={e => setFormData({ ...formData, estimated_cost: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Est. Delivery</label>
+                                                    <input type="date" value={formData.estimated_delivery_date?.split('T')[0]} onChange={e => setFormData({ ...formData, estimated_delivery_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                                <textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3"></textarea>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {editTab === 'watch' && (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                                                <select
+                                                    value={formData.brand_id}
+                                                    onChange={e => setFormData({ ...formData, brand_id: e.target.value })}
+                                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white"
+                                                >
+                                                    <option value="">Select Brand</option>
+                                                    {brands.map(brand => (
+                                                        <option key={brand.id} value={brand.id}>{brand.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Model Number</label>
+                                                    <input type="text" value={formData.model_number} onChange={e => setFormData({ ...formData, model_number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+                                                    <input type="text" value={formData.watch_serial_number} onChange={e => setFormData({ ...formData, watch_serial_number: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">UCP Rate</label>
+                                                    <input type="number" step="0.01" value={formData.ucp_rate} onChange={e => setFormData({ ...formData, ucp_rate: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Date</label>
+                                                    <input type="date" value={formData.date_of_purchase?.split('T')[0]} onChange={e => setFormData({ ...formData, date_of_purchase: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Other Remarks</label>
+                                                <textarea value={formData.other_remarks} onChange={e => setFormData({ ...formData, other_remarks: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="2"></textarea>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {editTab === 'customer' && (
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                                <input type="text" value={formData.customer_name} onChange={e => setFormData({ ...formData, customer_name: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
+                                                    <input type="text" value={formData.customer_contact} onChange={e => setFormData({ ...formData, customer_contact: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                                    <input type="email" value={formData.customer_email} onChange={e => setFormData({ ...formData, customer_email: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                                <textarea value={formData.customer_address} onChange={e => setFormData({ ...formData, customer_address: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3"></textarea>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {editTab === 'issues' && (
+                                        <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
+                                            <div>
+                                                <h4 className="font-medium text-gray-900 mb-3 sticky top-0 bg-white py-2 border-b border-gray-100">Complaints</h4>
+                                                <div className="space-y-2">
+                                                    {availableComplaints.map(node => (
+                                                        <label key={node.id} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={formData.selected_complaint_ids.includes(node.id)}
+                                                                onChange={(e) => {
+                                                                    const newIds = e.target.checked
+                                                                        ? [...formData.selected_complaint_ids, node.id]
+                                                                        : formData.selected_complaint_ids.filter(id => id !== node.id);
+                                                                    setFormData({ ...formData, selected_complaint_ids: newIds });
+                                                                }}
+                                                                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <div className="text-sm">
+                                                                <span className="font-medium text-gray-900">{node.label}</span>
+                                                                {node.code && <span className="text-gray-500 ml-2 text-xs">({node.code})</span>}
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="font-medium text-gray-900 mb-3 sticky top-0 bg-white py-2 border-b border-gray-100">Conditions</h4>
+                                                <div className="space-y-2">
+                                                    {availableConditions.map(node => (
+                                                        <label key={node.id} className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={formData.selected_condition_ids.includes(node.id)}
+                                                                onChange={(e) => {
+                                                                    const newIds = e.target.checked
+                                                                        ? [...formData.selected_condition_ids, node.id]
+                                                                        : formData.selected_condition_ids.filter(id => id !== node.id);
+                                                                    setFormData({ ...formData, selected_condition_ids: newIds });
+                                                                }}
+                                                                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            <div className="text-sm">
+                                                                <span className="font-medium text-gray-900">{node.label}</span>
+                                                                {node.code && <span className="text-gray-500 ml-2 text-xs">({node.code})</span>}
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
                                         <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
                                         <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
                                     </div>

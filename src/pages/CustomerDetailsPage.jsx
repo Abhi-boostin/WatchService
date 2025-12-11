@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Clock, Globe, Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
+import CustomDatePicker from '../components/common/CustomDatePicker';
 
 const CustomerDetailsPage = () => {
     const { id } = useParams();
@@ -70,7 +71,15 @@ const CustomerDetailsPage = () => {
     const handleUpdateCustomer = async (e) => {
         e.preventDefault();
         try {
-            const response = await api.patch(`/api/v1/customers/${id}`, formData);
+            // Filter out empty strings for optional fields to avoid validation errors
+            const customerData = { ...formData };
+            Object.keys(customerData).forEach(key => {
+                if (customerData[key] === '' || customerData[key] === null || customerData[key] === undefined) {
+                    delete customerData[key];
+                }
+            });
+            
+            const response = await api.patch(`/api/v1/customers/${id}`, customerData);
             setCustomer(response.data);
             closeModal();
         } catch (error) {
@@ -285,6 +294,30 @@ const CustomerDetailsPage = () => {
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
                                             <input type="text" value={formData.postal_code || ''} onChange={e => setFormData({ ...formData, postal_code: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <CustomDatePicker
+                                                label="Date of Birth"
+                                                name="date_of_birth"
+                                                value={formData.date_of_birth || ''}
+                                                onChange={e => setFormData({ ...formData, date_of_birth: e.target.value })}
+                                                placeholder="Select Date of Birth"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                                            <select
+                                                value={formData.gender || ''}
+                                                onChange={e => setFormData({ ...formData, gender: e.target.value })}
+                                                className="w-full px-3 py-2 rounded-lg border border-gray-200"
+                                            >
+                                                <option value="">Select Gender</option>
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div className="flex justify-end gap-3 mt-6">
