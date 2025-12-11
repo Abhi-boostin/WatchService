@@ -100,6 +100,9 @@ const CreateJobPage = () => {
     // State for autofill prompt
     const [pendingCustomer, setPendingCustomer] = useState(null);
 
+    // Cost Breakdown State
+    const [costBreakdown, setCostBreakdown] = useState(null);
+
     useEffect(() => {
         const fetchBrands = async () => {
             try {
@@ -425,6 +428,69 @@ const CreateJobPage = () => {
     const [createdWatchId, setCreatedWatchId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
+    const handleCalculateCost = async () => {
+        if (!createdJobId || !createdWatchId) {
+            alert("Job or Watch not created yet. Please complete previous steps.");
+            return;
+        }
+        try {
+            setIsLoading(true);
+
+            // 1. Clear existing issues to ensure backend matches frontend selection
+            try {
+                await api.delete(`/api/v1/complaints/watch-complaints/watch/${createdWatchId}/all`);
+                await api.delete(`/api/v1/conditions/watch-conditions/watch/${createdWatchId}/all`);
+            } catch (e) {
+                console.warn("Failed to clear existing issues:", e);
+            }
+
+            // 2. Attach Complaints
+            if (formData.issues.complaint_node_ids.length > 0) {
+                await api.post('/api/v1/complaints/watch-complaints/batch', {
+                    watch_id: createdWatchId,
+                    complaint_node_ids: formData.issues.complaint_node_ids,
+                    notes: "Customer reported"
+                });
+            }
+
+            // 3. Attach Conditions
+            if (formData.issues.condition_node_ids.length > 0) {
+                await api.post('/api/v1/conditions/watch-conditions/batch', {
+                    watch_id: createdWatchId,
+                    condition_node_ids: formData.issues.condition_node_ids,
+                    notes: "Initial conditions"
+                });
+            }
+
+            // 4. Recalculate Pricing
+            const response = await api.post(`/api/v1/jobs/${createdJobId}/recalculate-pricing`, {
+                apply_to_job: true
+            });
+
+            // The response structure is { estimate: { ... }, applied: true, message: ... }
+            const estimateData = response.data.estimate;
+            setCostBreakdown(estimateData);
+
+            if (estimateData && estimateData.estimated_total) {
+                setFormData(prev => ({
+                    ...prev,
+                    issues: {
+                        ...prev.issues,
+                        estimated_cost: parseFloat(estimateData.estimated_total),
+                        // Auto-set delivery to 30 days from now if not already set or if we want to force update
+                        estimated_delivery: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                    }
+                }));
+            }
+
+        } catch (error) {
+            console.error("Calculation failed:", error);
+            alert("Failed to calculate cost. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleStep1Next = async () => {
         try {
             // Validate Customer Data (Basic validation)
@@ -648,6 +714,9 @@ const CreateJobPage = () => {
                         complaintNodes={complaintNodes}
                         handleConditionToggle={handleConditionToggle}
                         handleComplaintToggle={handleComplaintToggle}
+                        onCalculateCost={handleCalculateCost}
+                        costBreakdown={costBreakdown}
+                        isCalculating={isLoading}
                     />
                 )}
                 {currentStep === 4 && (
