@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { FileBarChart, Calendar, Clock, Download, Loader2, Filter } from 'lucide-react';
 import api from '../services/api';
+import { getFinancialYearDates } from '../utils/dateUtils';
 
 const ReportsPage = () => {
     const [loading, setLoading] = useState(false);
 
     // Date Wise Report State
     const [reportType, setReportType] = useState('pending_repair');
-    const [dateRange, setDateRange] = useState({
-        from: new Date().toISOString().split('T')[0],
-        to: new Date().toISOString().split('T')[0]
-    });
+    const [dateRange, setDateRange] = useState(getFinancialYearDates());
 
     // Delay Report State
     const [delayDays, setDelayDays] = useState(15);
