@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Filter, ChevronLeft, ChevronRight, Eye, LayoutGrid, List, Calendar, User, Clock, Pencil, Trash2, AlertTriangle, X, Save, CheckCircle } from 'lucide-react';
+import { Search, Filter, ChevronLeft, ChevronRight, Eye, LayoutGrid, List, Calendar, User, Clock, Trash2, AlertTriangle, X, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 
 const JobListPage = () => {
@@ -20,7 +20,7 @@ const JobListPage = () => {
 
     // Modal States
     const [selectedJob, setSelectedJob] = useState(null);
-    const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay', 'status'
+    const [modalType, setModalType] = useState(null); // 'delete', 'status'
     const [formData, setFormData] = useState({});
 
     useEffect(() => {
@@ -126,38 +126,10 @@ const JobListPage = () => {
     };
 
     // Actions
-    const openEditModal = (job, e) => {
-        e.stopPropagation();
-        setSelectedJob(job);
-        setFormData({
-            estimated_cost: job.estimated_cost,
-            estimated_parts_cost: job.estimated_parts_cost,
-            estimated_labour_cost: job.estimated_labour_cost,
-            deduction: job.deduction,
-            deduction_note: job.deduction_note,
-            additional_charge: job.additional_charge,
-            additional_charge_note: job.additional_charge_note,
-            actual_cost: job.actual_cost,
-            estimated_delivery_date: job.estimated_delivery_date,
-            notes: job.notes
-        });
-        setModalType('edit');
-    };
-
     const openDeleteModal = (job, e) => {
         e.stopPropagation();
         setSelectedJob(job);
         setModalType('delete');
-    };
-
-    const openDelayModal = (job, e) => {
-        e.stopPropagation();
-        setSelectedJob(job);
-        setFormData({
-            delay_reason: '',
-            new_estimated_delivery_date: job.estimated_delivery_date || ''
-        });
-        setModalType('delay');
     };
 
     const openStatusModal = (job, e) => {
@@ -176,18 +148,6 @@ const JobListPage = () => {
         setFormData({});
     };
 
-    const handleUpdateJob = async (e) => {
-        e.preventDefault();
-        try {
-            await api.patch(`/api/v1/jobs/${selectedJob.id}`, formData);
-            fetchJobs();
-            closeModal();
-        } catch (error) {
-            console.error("Error updating job:", error);
-            alert("Failed to update job");
-        }
-    };
-
     const handleDeleteJob = async () => {
         try {
             await api.delete(`/api/v1/jobs/${selectedJob.id}`);
@@ -196,18 +156,6 @@ const JobListPage = () => {
         } catch (error) {
             console.error("Error deleting job:", error);
             alert("Failed to delete job");
-        }
-    };
-
-    const handleDelayJob = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post(`/api/v1/jobs/${selectedJob.id}/delay`, formData);
-            fetchJobs();
-            closeModal();
-        } catch (error) {
-            console.error("Error adding delay:", error);
-            alert("Failed to add delay");
         }
     };
 
@@ -381,20 +329,6 @@ const JobListPage = () => {
                                                             <Eye size={18} />
                                                         </button>
                                                         <button
-                                                            onClick={(e) => openEditModal(job, e)}
-                                                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                                            title="Edit Job"
-                                                        >
-                                                            <Pencil size={18} />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => openDelayModal(job, e)}
-                                                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                                                            title="Add Delay"
-                                                        >
-                                                            <Clock size={18} />
-                                                        </button>
-                                                        <button
                                                             onClick={(e) => openDeleteModal(job, e)}
                                                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                                                             title="Delete Job"
@@ -441,20 +375,6 @@ const JobListPage = () => {
                                     </div>
 
                                     <div className="pt-4 border-t border-gray-100 flex justify-end gap-2">
-                                        <button
-                                            onClick={(e) => openEditModal(job, e)}
-                                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                                            title="Edit Job"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
-                                        <button
-                                            onClick={(e) => openDelayModal(job, e)}
-                                            className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                                            title="Add Delay"
-                                        >
-                                            <Clock size={18} />
-                                        </button>
                                         <button
                                             onClick={(e) => openDeleteModal(job, e)}
                                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
@@ -513,9 +433,7 @@ const JobListPage = () => {
                     <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
                             <h3 className="text-lg font-bold text-gray-900">
-                                {modalType === 'edit' && 'Edit Job'}
                                 {modalType === 'delete' && 'Delete Job'}
-                                {modalType === 'delay' && 'Add Job Delay'}
                                 {modalType === 'status' && 'Update Job Status'}
                             </h3>
                             <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
@@ -524,29 +442,6 @@ const JobListPage = () => {
                         </div>
 
                         <div className="p-6">
-                            {modalType === 'edit' && (
-                                <form onSubmit={handleUpdateJob} className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Est. Cost</label>
-                                            <input type="number" step="0.01" value={formData.estimated_cost} onChange={e => setFormData({ ...formData, estimated_cost: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Est. Delivery</label>
-                                            <input type="date" value={formData.estimated_delivery_date?.split('T')[0]} onChange={e => setFormData({ ...formData, estimated_delivery_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                        <textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3"></textarea>
-                                    </div>
-                                    <div className="flex justify-end gap-3 mt-6">
-                                        <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
-                                    </div>
-                                </form>
-                            )}
-
                             {modalType === 'delete' && (
                                 <div>
                                     <div className="flex items-center gap-4 mb-6 bg-red-50 p-4 rounded-xl text-red-700">
@@ -558,23 +453,6 @@ const JobListPage = () => {
                                         <button onClick={handleDeleteJob} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete Job</button>
                                     </div>
                                 </div>
-                            )}
-
-                            {modalType === 'delay' && (
-                                <form onSubmit={handleDelayJob} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">New Delivery Date</label>
-                                        <input type="date" required value={formData.new_estimated_delivery_date?.split('T')[0]} onChange={e => setFormData({ ...formData, new_estimated_delivery_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Delay Reason</label>
-                                        <textarea required value={formData.delay_reason} onChange={e => setFormData({ ...formData, delay_reason: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3" placeholder="Explain why the job is delayed..."></textarea>
-                                    </div>
-                                    <div className="flex justify-end gap-3 mt-6">
-                                        <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                                        <button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">Add Delay</button>
-                                    </div>
-                                </form>
                             )}
 
                             {modalType === 'status' && (
