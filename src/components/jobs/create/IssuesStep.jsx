@@ -6,21 +6,15 @@ const ConditionNode = ({ node, level = 0, selectedIds, onToggle }) => {
     const isSelected = selectedIds.includes(node.id);
     const hasChildren = node.children && node.children.length > 0;
 
-    return (
-        <div className={`ml-${level * 4} mb-2`}>
-            <label className={`flex items-center space-x-3 p-2 rounded-lg transition-colors ${isSelected ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'} border border-transparent`}>
-                <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => onToggle(node.id)}
-                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                />
-                <span className={`text-sm ${level === 0 ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                    {node.label}
-                </span>
-            </label>
-            {hasChildren && (
-                <div className="ml-6 mt-2 border-l-2 border-gray-100 pl-2">
+    if (hasChildren) {
+        return (
+            <div className={`ml-${level * 4} mb-2`}>
+                <div className="p-2">
+                    <span className={`text-sm font-semibold text-gray-900`}>
+                        {node.label}
+                    </span>
+                </div>
+                <div className="ml-6 mt-1 border-l-2 border-gray-100 pl-2">
                     {node.children.map(child => (
                         <ConditionNode
                             key={child.id}
@@ -31,12 +25,28 @@ const ConditionNode = ({ node, level = 0, selectedIds, onToggle }) => {
                         />
                     ))}
                 </div>
-            )}
+            </div>
+        );
+    }
+
+    return (
+        <div className={`ml-${level * 4} mb-2`}>
+            <label className={`flex items-center space-x-3 p-2 rounded-lg transition-colors cursor-pointer ${isSelected ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'} border border-transparent`}>
+                <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggle(node.id)}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">
+                    {node.label}
+                </span>
+            </label>
         </div>
     );
 };
 
-const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, handleConditionToggle, handleComplaintToggle }) => {
+const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, handleConditionToggle, handleComplaintToggle, onCalculateCost, costBreakdown, isCalculating }) => {
     const { issues } = formData;
 
     return (
@@ -91,7 +101,45 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200">
+                    {/* Cost Calculation Section */}
+                    <div className="pt-4 border-t border-gray-200">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-sm font-medium text-gray-700">Cost Estimation</h4>
+                            <button
+                                type="button"
+                                onClick={onCalculateCost}
+                                disabled={isCalculating}
+                                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {isCalculating ? 'Calculating...' : 'Calculate Estimate'}
+                            </button>
+                        </div>
+
+                        {costBreakdown && (
+                            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Total Estimate</span>
+                                        <span className="text-lg font-bold text-blue-700">₹{costBreakdown.estimated_total}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Labour Cost</span>
+                                        <span className="text-sm font-medium text-gray-900">₹{costBreakdown.total_labour_cost}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Parts Cost</span>
+                                        <span className="text-sm font-medium text-gray-900">₹{costBreakdown.total_parts_cost}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">UCP Rate</span>
+                                        <span className="text-sm font-medium text-gray-900">₹{costBreakdown.ucp_rate}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Estimated Cost */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Cost</label>
