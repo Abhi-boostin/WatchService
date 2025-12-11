@@ -120,19 +120,19 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
                                         <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Total Estimate</span>
-                                        <span className="text-lg font-bold text-blue-700">₹{costBreakdown.estimated_total}</span>
+                                        <span className="text-lg font-bold text-blue-700">₹{parseFloat(costBreakdown.estimated_total).toFixed(2)}</span>
                                     </div>
                                     <div>
                                         <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Labour Cost</span>
-                                        <span className="text-sm font-medium text-gray-900">₹{costBreakdown.total_labour_cost}</span>
+                                        <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.total_labour_cost).toFixed(2)}</span>
                                     </div>
                                     <div>
                                         <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Parts Cost</span>
-                                        <span className="text-sm font-medium text-gray-900">₹{costBreakdown.total_parts_cost}</span>
+                                        <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.total_parts_cost).toFixed(2)}</span>
                                     </div>
                                     <div>
                                         <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">UCP Rate</span>
-                                        <span className="text-sm font-medium text-gray-900">₹{costBreakdown.ucp_rate}</span>
+                                        <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.ucp_rate).toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>
