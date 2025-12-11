@@ -14,6 +14,7 @@ import ProfilePage from './pages/ProfilePage';
 import SuppliersPage from './pages/SuppliersPage';
 import BrandsPage from './pages/BrandsPage';
 import IndentsPage from './pages/IndentsPage';
+import IndentDetailPage from './pages/IndentDetailPage';
 import ServiceParametersPage from './pages/ServiceParametersPage';
 import ReportsPage from './pages/ReportsPage';
 import PricingRulesPage from './pages/PricingRulesPage';
@@ -36,6 +37,7 @@ function App() {
             <Route path="/customers" element={<CustomerListPage />} />
             <Route path="/customers/:id" element={<CustomerDetailsPage />} />
             <Route path="/indents" element={<IndentsPage />} />
+            <Route path="/indents/:id" element={<IndentDetailPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
             <Route path="/brands" element={<BrandsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
