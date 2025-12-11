@@ -247,7 +247,7 @@ const ServiceParametersPage = () => {
                                 >
                                     <option value="">None (Create as Main Heading)</option>
                                     {potentialParents
-                                        .filter(p => !selectedNode || (p.id !== selectedNode.id)) // Simple cycle prevention: can't be own parent. Ideally should also exclude descendants.
+                                        .filter(p => p.parent_id === null && (!selectedNode || p.id !== selectedNode.id)) // Simple cycle prevention: can't be own parent. Ideally should also exclude descendants.
                                         .map(node => (
                                             <option key={node.id} value={node.id}>
                                                 {node.label}
