@@ -43,4 +43,11 @@ export const authService = {
     },
 };
 
+export const dashboardService = {
+    getStatistics: async () => {
+        const response = await api.get('/api/v1/jobs/dashboard/statistics');
+        return response.data;
+    },
+};
+
 export default api;

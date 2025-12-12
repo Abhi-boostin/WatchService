@@ -4,15 +4,15 @@ import {
     Plus, Clock, CheckCircle,
     AlertCircle, Package, ChevronRight
 } from 'lucide-react';
-import api from '../services/api';
+import api, { dashboardService } from '../services/api';
 
 const DashboardPage = () => {
     const navigate = useNavigate();
     const [stats, setStats] = useState({
-        total: 0,
-        inProgress: 0,
-        completed: 0,
-        pending: 0
+        total_active_jobs: 0,
+        in_progress: 0,
+        ready_for_delivery: 0,
+        completed_today: 0
     });
     const [recentJobs, setRecentJobs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -23,33 +23,14 @@ const DashboardPage = () => {
 
     const fetchDashboardData = async () => {
         try {
-            // Fetch stats by making parallel requests for counts
-            // We use page_size=1 because we only care about the 'total' in the metadata
-            const [
-                allJobsRes,
-                indentedRes,
-                partsReceivedRes,
-                completedRes,
-                bookedRes
-            ] = await Promise.all([
-                api.get('/api/v1/jobs?page=1&page_size=1'),
-                api.get('/api/v1/jobs?page=1&page_size=1&status_filter=indented'),
-                api.get('/api/v1/jobs?page=1&page_size=1&status_filter=parts_received'),
-                api.get('/api/v1/jobs?page=1&page_size=1&status_filter=completed'),
-                api.get('/api/v1/jobs?page=1&page_size=1&status_filter=booked')
-            ]);
-
+            // Fetch statistics from the optimized dashboard endpoint
+            const statistics = await dashboardService.getStatistics();
+            
             // Fetch recent jobs (first 5)
             const recentJobsRes = await api.get('/api/v1/jobs?page=1&page_size=5&sort_by=created_at&sort_order=desc');
 
             setRecentJobs(recentJobsRes.data.items);
-
-            setStats({
-                total: allJobsRes.data.pagination.total,
-                inProgress: indentedRes.data.pagination.total + partsReceivedRes.data.pagination.total,
-                completed: completedRes.data.pagination.total,
-                pending: bookedRes.data.pagination.total
-            });
+            setStats(statistics);
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
         } finally {
@@ -90,28 +71,28 @@ const DashboardPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard
                     title="Total Active Jobs"
-                    value={stats.total}
+                    value={stats.total_active_jobs}
                     icon={Package}
                     color="text-blue-600"
                     bgColor="bg-blue-50"
                 />
                 <StatCard
                     title="In Progress"
-                    value={stats.inProgress}
+                    value={stats.in_progress}
                     icon={Clock}
                     color="text-orange-600"
                     bgColor="bg-orange-50"
                 />
                 <StatCard
                     title="Ready for Delivery"
-                    value={stats.pending}
+                    value={stats.ready_for_delivery}
                     icon={AlertCircle}
                     color="text-purple-600"
                     bgColor="bg-purple-50"
                 />
                 <StatCard
                     title="Completed Today"
-                    value={stats.completed}
+                    value={stats.completed_today}
                     icon={CheckCircle}
                     color="text-green-600"
                     bgColor="bg-green-50"
