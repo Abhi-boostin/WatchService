@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, User, Watch, AlertTriangle, Image as ImageIcon,
     Calendar, DollarSign, Clock, CheckCircle, XCircle,
-    MessageSquare, ClipboardCheck, Pencil, Trash2, X, ClipboardList
+    MessageSquare, ClipboardCheck, Pencil, Trash2, X, ClipboardList,
+    Download, ZoomIn
 } from 'lucide-react';
 import api from '../services/api';
 import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelector';
@@ -25,6 +26,10 @@ const JobDetailsPage = () => {
 
     // Refs for scroll spy
     const sectionRefs = React.useRef({});
+
+    // Image state
+    const [imageUrls, setImageUrls] = useState({});
+    const [selectedImage, setSelectedImage] = useState(null);
 
     // Modal States
     const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay'
@@ -135,6 +140,34 @@ const JobDetailsPage = () => {
             mounted = false;
         };
     }, [id]);
+
+    // Fetch images with authentication
+    useEffect(() => {
+        const fetchImages = async () => {
+            const urls = {};
+            for (const attachment of attachments) {
+                try {
+                    const response = await api.get(`/api/v1/attachments/watch/${attachment.id}`, {
+                        responseType: 'blob'
+                    });
+                    const url = URL.createObjectURL(response.data);
+                    urls[attachment.id] = url;
+                } catch (error) {
+                    console.error(`Error fetching image ${attachment.id}:`, error);
+                }
+            }
+            setImageUrls(urls);
+        };
+
+        if (attachments.length > 0) {
+            fetchImages();
+        }
+
+        // Cleanup: revoke object URLs when component unmounts
+        return () => {
+            Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [attachments]);
 
     // Scroll spy with IntersectionObserver
     useEffect(() => {
@@ -778,16 +811,79 @@ const JobDetailsPage = () => {
                     ref={el => sectionRefs.current.images = el}
                     className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24"
                 >
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Watch Images</h2>
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Watch Images & Attachments</h2>
                     {attachments.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {attachments.map((img, index) => (
-                                <div key={index} className="relative group aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
-                                    <img
-                                        src={img.file_path || img.url}
-                                        alt={`Watch ${index + 1}`}
-                                        className="w-full h-full object-cover"
-                                    />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {attachments.map((attachment, index) => (
+                                <div key={attachment.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+                                    {/* Image Preview */}
+                                    <div className="relative aspect-video bg-gray-100 group cursor-pointer" onClick={() => setSelectedImage(attachment)}>
+                                        {imageUrls[attachment.id] ? (
+                                            <>
+                                                <img
+                                                    src={imageUrls[attachment.id]}
+                                                    alt={attachment.file_name || `Attachment ${index + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all flex items-center justify-center">
+                                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={32} />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center">
+                                                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Metadata */}
+                                    <div className="p-4 space-y-3">
+                                        {/* Filename */}
+                                        <div>
+                                            <h4 className="font-medium text-gray-900 truncate" title={attachment.file_name}>
+                                                {attachment.file_name || `attachment_${attachment.id}`}
+                                            </h4>
+                                        </div>
+
+                                        {/* Details Grid */}
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div className="flex items-center gap-1 text-gray-500">
+                                                <Calendar size={12} />
+                                                <span>{attachment.uploaded_at ? new Date(attachment.uploaded_at).toLocaleDateString() : '-'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 text-gray-500">
+                                                <ImageIcon size={12} />
+                                                <span>{attachment.file_size ? `${(attachment.file_size / 1024).toFixed(1)} KB` : '-'}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Association Badge */}
+                                        <div className="flex items-center gap-2">
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">
+                                                <Watch size={12} />
+                                                Watch
+                                            </span>
+                                            {attachment.mime_type && (
+                                                <span className="text-xs text-gray-400 uppercase">
+                                                    {attachment.mime_type.split('/')[1]}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Download Button */}
+                                        <button
+                                            onClick={() => {
+                                                const link = document.createElement('a');
+                                                link.href = imageUrls[attachment.id];
+                                                link.download = attachment.file_name || `attachment_${attachment.id}`;
+                                                link.click();
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors text-sm font-medium"
+                                        >
+                                            <Download size={16} />
+                                            Download
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -984,6 +1080,69 @@ const JobDetailsPage = () => {
                                     </div>
                                 </form>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Image Lightbox Modal */}
+            {selectedImage && (
+                <div 
+                    className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4" 
+                    onClick={() => setSelectedImage(null)}
+                >
+                    <div className="relative max-w-7xl max-h-full" onClick={e => e.stopPropagation()}>
+                        {/* Close Button */}
+                        <button 
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+                        >
+                            <X size={32} />
+                        </button>
+
+                        {/* Image */}
+                        <div className="bg-white rounded-lg overflow-hidden shadow-2xl">
+                            <img
+                                src={imageUrls[selectedImage.id]}
+                                alt={selectedImage.file_name}
+                                className="max-h-[80vh] w-auto mx-auto"
+                            />
+                            
+                            {/* Image Info Bar */}
+                            <div className="p-4 bg-gray-50 border-t border-gray-200">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold text-gray-900 truncate">
+                                            {selectedImage.file_name || `Attachment ${selectedImage.id}`}
+                                        </h3>
+                                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                                            <span className="flex items-center gap-1">
+                                                <Calendar size={14} />
+                                                {selectedImage.uploaded_at ? new Date(selectedImage.uploaded_at).toLocaleDateString() : '-'}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <ImageIcon size={14} />
+                                                {selectedImage.file_size ? `${(selectedImage.file_size / 1024).toFixed(1)} KB` : '-'}
+                                            </span>
+                                            {selectedImage.mime_type && (
+                                                <span className="uppercase">{selectedImage.mime_type}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const link = document.createElement('a');
+                                            link.href = imageUrls[selectedImage.id];
+                                            link.download = selectedImage.file_name || `attachment_${selectedImage.id}`;
+                                            link.click();
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                                    >
+                                        <Download size={18} />
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

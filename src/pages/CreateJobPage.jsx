@@ -17,77 +17,10 @@ const steps = [
     { id: 4, title: 'Images', icon: Camera },
 ];
 
-// Fallback brands if API fails
-const DEFAULT_BRANDS = [
-    { id: 1, name: 'Rolex' },
-    { id: 2, name: 'Omega' },
-    { id: 3, name: 'Tag Heuer' },
-    { id: 4, name: 'Breitling' },
-    { id: 5, name: 'Patek Philippe' },
-    { id: 6, name: 'Audemars Piguet' },
-    { id: 7, name: 'Cartier' },
-    { id: 8, name: 'Seiko' },
-    { id: 9, name: 'Casio' },
-    { id: 10, name: 'Other' }
-];
-
-const CONDITION_NODES = [
-    {
-        id: 1,
-        label: "Movement",
-        code: "MOVEMENT",
-        children: [
-            { id: 10, label: "Not Working", code: "MV_NOT_WORKING", children: [] },
-            { id: 11, label: "Running Slow", code: "MV_SLOW", children: [] },
-            { id: 12, label: "Running Fast", code: "MV_FAST", children: [] }
-        ]
-    },
-    {
-        id: 2,
-        label: "Case",
-        code: "CASE",
-        children: [
-            { id: 20, label: "Scratched", code: "CS_SCRATCHED", children: [] },
-            { id: 21, label: "Dented", code: "CS_DENTED", children: [] },
-            { id: 22, label: "Polishing Required", code: "CS_POLISH", children: [] }
-        ]
-    },
-    {
-        id: 3,
-        label: "Crystal / Glass",
-        code: "CRYSTAL",
-        children: [
-            { id: 30, label: "Broken", code: "CR_BROKEN", children: [] },
-            { id: 31, label: "Chipped", code: "CR_CHIPPED", children: [] },
-            { id: 32, label: "Scratched", code: "CR_SCRATCHED", children: [] }
-        ]
-    },
-    {
-        id: 4,
-        label: "Dial & Hands",
-        code: "DIAL",
-        children: [
-            { id: 40, label: "Discolored", code: "DL_DISCOLOR", children: [] },
-            { id: 41, label: "Lume Missing", code: "DL_LUME", children: [] },
-            { id: 42, label: "Hands Loose", code: "DL_HANDS", children: [] }
-        ]
-    },
-    {
-        id: 5,
-        label: "Bracelet / Strap",
-        code: "STRAP",
-        children: [
-            { id: 50, label: "Broken Link", code: "ST_LINK", children: [] },
-            { id: 51, label: "Clasp Issue", code: "ST_CLASP", children: [] },
-            { id: 52, label: "Worn Out", code: "ST_WORN", children: [] }
-        ]
-    }
-];
-
 const CreateJobPage = () => {
     const navigate = useNavigate();
     const [currentStep, setCurrentStep] = useState(1);
-    const [brands, setBrands] = useState(DEFAULT_BRANDS);
+    const [brands, setBrands] = useState([]);
     const [conditionNodes, setConditionNodes] = useState([]);
     const [complaintNodes, setComplaintNodes] = useState([]);
 
