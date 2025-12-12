@@ -11,7 +11,7 @@ import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelec
 const JobDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeSection, setActiveSection] = useState('overview');
     const [loading, setLoading] = useState(true);
     const [job, setJob] = useState(null);
     const [customer, setCustomer] = useState(null);
@@ -22,6 +22,9 @@ const JobDetailsPage = () => {
     const [brands, setBrands] = useState([]);
     const [availableComplaints, setAvailableComplaints] = useState([]);
     const [availableConditions, setAvailableConditions] = useState([]);
+
+    // Refs for scroll spy
+    const sectionRefs = React.useRef({});
 
     // Modal States
     const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay'
@@ -132,6 +135,40 @@ const JobDetailsPage = () => {
             mounted = false;
         };
     }, [id]);
+
+    // Scroll spy with IntersectionObserver
+    useEffect(() => {
+        // Wait for sections to be rendered
+        if (loading || !job) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                        setActiveSection(entry.target.id);
+                    }
+                });
+            },
+            {
+                threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+                rootMargin: '-120px 0px -50% 0px'
+            }
+        );
+
+        // Small delay to ensure refs are set
+        const timeoutId = setTimeout(() => {
+            Object.values(sectionRefs.current).forEach((ref) => {
+                if (ref) {
+                    observer.observe(ref);
+                }
+            });
+        }, 100);
+
+        return () => {
+            clearTimeout(timeoutId);
+            observer.disconnect();
+        };
+    }, [loading, job]);
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: User },
@@ -516,18 +553,23 @@ const JobDetailsPage = () => {
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="border-b border-gray-200 mb-8">
-                <div className="flex space-x-8">
+            {/* Navigation Tabs - Sticky */}
+            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 mb-8 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+                <div className="flex space-x-8 overflow-x-auto">
                     {tabs.map((tab) => {
                         const Icon = tab.icon;
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                onClick={() => {
+                                    document.getElementById(tab.id)?.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'start'
+                                    });
+                                }}
                                 className={`
-                                    flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                                    ${activeTab === tab.id
+                                    flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
+                                    ${activeSection === tab.id
                                         ? 'border-blue-600 text-blue-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
                                 `}
@@ -540,9 +582,15 @@ const JobDetailsPage = () => {
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 min-h-[400px]">
-                {activeTab === 'overview' && (
+            {/* Content - All Sections Visible */}
+            <div className="space-y-8">
+                {/* Overview Section */}
+                <section 
+                    id="overview" 
+                    ref={el => sectionRefs.current.overview = el}
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24"
+                >
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Overview</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h3>
@@ -609,51 +657,60 @@ const JobDetailsPage = () => {
                             </div>
                         </div>
                     </div>
-                )}
+                </section>
 
-                {activeTab === 'watch' && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Watch Information</h3>
-                        {watch ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div className="flex justify-between py-2 border-b border-gray-100">
-                                        <span className="text-gray-500">Brand ID</span>
-                                        <span className="font-medium text-gray-900">{watch.brand_id}</span>
-                                    </div>
-                                    <div className="flex justify-between py-2 border-b border-gray-100">
-                                        <span className="text-gray-500">Model Number</span>
-                                        <span className="font-medium text-gray-900">{watch.model_number}</span>
-                                    </div>
-                                    <div className="flex justify-between py-2 border-b border-gray-100">
-                                        <span className="text-gray-500">Serial Number</span>
-                                        <span className="font-medium text-gray-900">{watch.watch_serial_number}</span>
-                                    </div>
+                {/* Watch Details Section */}
+                <section 
+                    id="watch" 
+                    ref={el => sectionRefs.current.watch = el}
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24"
+                >
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Watch Details</h2>
+                    {watch ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-500">Brand ID</span>
+                                    <span className="font-medium text-gray-900">{watch.brand_id}</span>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="flex justify-between py-2 border-b border-gray-100">
-                                        <span className="text-gray-500">Purchase Date</span>
-                                        <span className="font-medium text-gray-900">
-                                            {watch.date_of_purchase ? new Date(watch.date_of_purchase).toLocaleDateString() : '-'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between py-2 border-b border-gray-100">
-                                        <span className="text-gray-500">UCP Rate</span>
-                                        <span className="font-medium text-gray-900">₹{watch.ucp_rate || '0.00'}</span>
-                                    </div>
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-500">Model Number</span>
+                                    <span className="font-medium text-gray-900">{watch.model_number}</span>
                                 </div>
-                                <div className="col-span-1 md:col-span-2 mt-4">
-                                    <span className="text-gray-500 block mb-2">Other Remarks</span>
-                                    <p className="p-4 bg-gray-50 rounded-lg text-gray-700">{watch.other_remarks || 'No remarks.'}</p>
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-500">Serial Number</span>
+                                    <span className="font-medium text-gray-900">{watch.watch_serial_number}</span>
                                 </div>
                             </div>
-                        ) : (
-                            <p className="text-gray-500">No watch details found.</p>
-                        )}
-                    </div>
-                )}
+                            <div className="space-y-4">
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-500">Purchase Date</span>
+                                    <span className="font-medium text-gray-900">
+                                        {watch.date_of_purchase ? new Date(watch.date_of_purchase).toLocaleDateString() : '-'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-500">UCP Rate</span>
+                                    <span className="font-medium text-gray-900">₹{watch.ucp_rate || '0.00'}</span>
+                                </div>
+                            </div>
+                            <div className="col-span-1 md:col-span-2 mt-4">
+                                <span className="text-gray-500 block mb-2">Other Remarks</span>
+                                <p className="p-4 bg-gray-50 rounded-lg text-gray-700">{watch.other_remarks || 'No remarks.'}</p>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-gray-500">No watch details found.</p>
+                    )}
+                </section>
 
-                {activeTab === 'issues' && (
+                {/* Issues & Conditions Section */}
+                <section 
+                    id="issues" 
+                    ref={el => sectionRefs.current.issues = el}
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24"
+                >
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Issues & Conditions</h2>
                     <div className="space-y-8">
                         {/* Complaints Section */}
                         <div>
@@ -713,31 +770,34 @@ const JobDetailsPage = () => {
                             )}
                         </div>
                     </div>
-                )}
+                </section>
 
-                {activeTab === 'images' && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Watch Images</h3>
-                        {attachments.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {attachments.map((img, index) => (
-                                    <div key={index} className="relative group aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
-                                        <img
-                                            src={img.file_path || img.url} // Adjust based on actual API response
-                                            alt={`Watch ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                                <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500">No images attached to this job.</p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                {/* Images Section */}
+                <section 
+                    id="images" 
+                    ref={el => sectionRefs.current.images = el}
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24"
+                >
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Watch Images</h2>
+                    {attachments.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {attachments.map((img, index) => (
+                                <div key={index} className="relative group aspect-square bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                                    <img
+                                        src={img.file_path || img.url}
+                                        alt={`Watch ${index + 1}`}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                            <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500">No images attached to this job.</p>
+                        </div>
+                    )}
+                </section>
             </div>
 
             {/* Modals */}
