@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Clock, Globe, Pencil, Trash2, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Clock, Globe, Pencil, Trash2, X, AlertTriangle, Briefcase, ChevronRight, DollarSign } from 'lucide-react';
 import api from '../services/api';
 import CustomDatePicker from '../components/common/CustomDatePicker';
 
@@ -8,6 +8,7 @@ const CustomerDetailsPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [customer, setCustomer] = useState(null);
+    const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Modal States
@@ -23,6 +24,35 @@ const CustomerDetailsPage = () => {
                 const response = await api.get(`/api/v1/customers/${id}`);
                 if (mounted) {
                     setCustomer(response.data);
+                    
+                    // Extract and sort jobs
+                    if (response.data.jobs && Array.isArray(response.data.jobs)) {
+                        // Sort jobs: active/pending first, then by creation date (newest first)
+                        const sortedJobs = [...response.data.jobs].sort((a, b) => {
+                            // Define status priority (lower number = higher priority)
+                            const statusPriority = {
+                                'booked': 1,
+                                'indented': 2,
+                                'parts_received': 3,
+                                'completed': 4,
+                                'delivered': 5,
+                                'cancelled': 6
+                            };
+                            
+                            const aPriority = statusPriority[a.status] || 99;
+                            const bPriority = statusPriority[b.status] || 99;
+                            
+                            // First sort by status priority
+                            if (aPriority !== bPriority) {
+                                return aPriority - bPriority;
+                            }
+                            
+                            // Then by creation date (newest first)
+                            return new Date(b.created_at) - new Date(a.created_at);
+                        });
+                        
+                        setJobs(sortedJobs);
+                    }
                 }
             } catch (error) {
                 console.error("Error fetching customer details:", error);
@@ -96,6 +126,49 @@ const CustomerDetailsPage = () => {
             console.error("Error deleting customer:", error);
             alert("Failed to delete customer");
         }
+    };
+
+    // Helper function to get status styling
+    const getStatusStyle = (status) => {
+        const styles = {
+            'booked': {
+                bg: 'bg-yellow-100',
+                text: 'text-yellow-800',
+                border: 'border-yellow-200',
+                hoverBorder: 'hover:border-yellow-400'
+            },
+            'indented': {
+                bg: 'bg-blue-100',
+                text: 'text-blue-800',
+                border: 'border-blue-200',
+                hoverBorder: 'hover:border-blue-400'
+            },
+            'parts_received': {
+                bg: 'bg-blue-100',
+                text: 'text-blue-800',
+                border: 'border-blue-200',
+                hoverBorder: 'hover:border-blue-400'
+            },
+            'completed': {
+                bg: 'bg-green-100',
+                text: 'text-green-800',
+                border: 'border-green-200',
+                hoverBorder: 'hover:border-green-400'
+            },
+            'delivered': {
+                bg: 'bg-green-100',
+                text: 'text-green-800',
+                border: 'border-green-200',
+                hoverBorder: 'hover:border-green-400'
+            },
+            'cancelled': {
+                bg: 'bg-gray-100',
+                text: 'text-gray-800',
+                border: 'border-gray-200',
+                hoverBorder: 'hover:border-gray-400'
+            }
+        };
+        return styles[status] || styles['booked'];
     };
 
     if (loading) {
@@ -228,6 +301,120 @@ const CustomerDetailsPage = () => {
                         <label className="text-sm text-gray-500">Postal Code</label>
                         <p className="font-medium text-gray-900">{customer.postal_code || '-'}</p>
                     </div>
+                </div>
+
+                {/* Service History Section */}
+                <div className="p-6 border-t border-gray-100 bg-gray-50/50">
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Briefcase size={20} className="text-blue-600" />
+                        Service History
+                        {jobs.length > 0 && (
+                            <span className="text-sm font-normal text-gray-500">
+                                ({jobs.length} {jobs.length === 1 ? 'job' : 'jobs'})
+                            </span>
+                        )}
+                    </h2>
+                </div>
+
+                <div className="p-6">
+                    {jobs.length > 0 ? (
+                        <div className="space-y-4">
+                            {jobs.map((job) => {
+                                const statusStyle = getStatusStyle(job.status);
+                                const isDelivered = job.status === 'delivered';
+                                const isActive = ['booked', 'indented', 'parts_received', 'completed'].includes(job.status);
+                                
+                                return (
+                                    <div
+                                        key={job.id}
+                                        onClick={() => navigate(`/jobs/${job.id}`)}
+                                        className={`bg-white border-2 ${statusStyle.border} ${statusStyle.hoverBorder} rounded-xl p-5 hover:shadow-lg transition-all cursor-pointer group`}
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1 space-y-3">
+                                                {/* Header Row */}
+                                                <div className="flex items-center gap-3 flex-wrap">
+                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                        {job.job_number || `Job #${job.id}`}
+                                                    </h3>
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${statusStyle.bg} ${statusStyle.text}`}>
+                                                        {job.status.replace(/_/g, ' ')}
+                                                    </span>
+                                                    {isActive && (
+                                                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                                                            <Calendar size={12} />
+                                                            Created {new Date(job.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Details Grid */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                    <div>
+                                                        <p className="text-xs text-gray-500 mb-1">Estimated Cost</p>
+                                                        <p className="font-medium text-gray-900 flex items-center gap-1">
+                                                            <DollarSign size={14} />
+                                                            ₹{job.estimated_cost || '0.00'}
+                                                        </p>
+                                                    </div>
+                                                    
+                                                    {job.estimated_delivery_date && (
+                                                        <div>
+                                                            <p className="text-xs text-gray-500 mb-1">Est. Delivery</p>
+                                                            <p className="font-medium text-gray-900">
+                                                                {new Date(job.estimated_delivery_date).toLocaleDateString()}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {job.actual_cost && (
+                                                        <div>
+                                                            <p className="text-xs text-gray-500 mb-1">Actual Cost</p>
+                                                            <p className="font-medium text-green-700 flex items-center gap-1">
+                                                                <DollarSign size={14} />
+                                                                ₹{job.actual_cost}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Completion Info */}
+                                                {(job.completed_at || job.delivered_at) && (
+                                                    <div className="pt-2 border-t border-gray-100">
+                                                        <div className="flex items-center gap-4 text-xs text-gray-600">
+                                                            {job.completed_at && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock size={12} />
+                                                                    Completed: {new Date(job.completed_at).toLocaleDateString()}
+                                                                </span>
+                                                            )}
+                                                            {job.delivered_at && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Clock size={12} />
+                                                                    Delivered: {new Date(job.delivered_at).toLocaleDateString()}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Arrow Icon */}
+                                            <div className="flex items-center">
+                                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                            <Briefcase className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500">No service history yet.</p>
+                            <p className="text-sm text-gray-400 mt-2">Jobs will appear here once created for this customer.</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center text-sm text-gray-500">
