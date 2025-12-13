@@ -39,8 +39,9 @@ const CreateJobPage = () => {
     useEffect(() => {
         const fetchBrands = async () => {
             try {
-                const response = await api.get('/api/v1/brands');
-                if (response.data && response.data.length > 0) {
+                const response = await api.get('/api/v1/brands/all');
+                // This endpoint returns a direct array, perfect for dropdowns
+                if (response.data && Array.isArray(response.data)) {
                     setBrands(response.data);
                 }
             } catch (error) {
