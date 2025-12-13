@@ -10,7 +10,6 @@ import {
     Settings,
     ChevronDown,
     ChevronRight,
-    Watch,
     FolderOpen,
     Plus,
     ClipboardList,
@@ -88,12 +87,17 @@ const Sidebar = () => {
     return (
         <div className="w-64 h-screen bg-[#F7F7F8] border-r border-gray-200 flex flex-col p-4">
             {/* Logo */}
-            <div className="flex items-center gap-3 px-2 mb-8 mt-2">
-                <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white">
-                    <Watch size={18} />
-                </div>
-                <span className="font-bold text-lg text-gray-900 tracking-tight">WatchService</span>
-            </div>
+            <NavLink 
+                to="/dashboard" 
+                className="flex items-center justify-center mt-6 mb-10 group"
+            >
+                <img 
+                    src="/WnM Logo.jpg" 
+                    alt="Watches & More" 
+                    className="w-40 h-auto object-contain hover:scale-[1.02] transition-all duration-300"
+                    style={{ filter: 'drop-shadow(0 2px 8px rgba(239, 68, 68, 0.08))' }}
+                />
+            </NavLink>
 
             {/* Navigation */}
             <nav className="flex-1 space-y-6 overflow-y-auto">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar } from 'lucide-react';
 import api from '../services/api';
 
 const IndentDetailPage = () => {
@@ -44,10 +44,9 @@ const IndentDetailPage = () => {
             const jobResponse = await api.get(`/api/v1/jobs/${indentResponse.data.job_id}`);
             setJob(jobResponse.data);
 
-            // Fetch supplier details if exists
-            if (indentResponse.data.supplier_id) {
-                const supplierResponse = await api.get(`/api/v1/suppliers/${indentResponse.data.supplier_id}`);
-                setSupplier(supplierResponse.data);
+            // Supplier is now included in the indent response
+            if (indentResponse.data.supplier) {
+                setSupplier(indentResponse.data.supplier);
             }
 
             setEditForm({
@@ -156,12 +155,6 @@ const IndentDetailPage = () => {
         }
     };
 
-    const calculateTotal = () => {
-        if (!indent?.parts) return 0;
-        return indent.parts.reduce((sum, part) => {
-            return sum + (part.quantity * (part.spare_part_unit_price || 0));
-        }, 0);
-    };
 
     const filteredSpareParts = allSpareParts.filter(part => 
         part.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -354,35 +347,29 @@ const IndentDetailPage = () => {
                             <thead className="bg-gray-50 border-b border-gray-100">
                                 <tr>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Part Name</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Part Number</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
                                     <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Quantity</th>
-                                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Unit Price</th>
-                                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
                                     <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {indent.parts.map((part) => (
-                                    <tr key={part.spare_part_id} className="hover:bg-gray-50">
+                                {indent.parts.map((part, index) => (
+                                    <tr key={part.indent_part_id || index} className="hover:bg-gray-50">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
                                                     <Package size={16} />
                                                 </div>
-                                                <span className="font-medium text-gray-900">{part.spare_part_name}</span>
+                                                <span className="font-medium text-gray-900">{part.part_name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{part.spare_part_number}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                                            {part.spare_part_description || '-'}
+                                        <td className="px-6 py-4 text-sm text-gray-600 max-w-md">
+                                            {part.description || '-'}
                                         </td>
-                                        <td className="px-6 py-4 text-right font-medium text-gray-900">{part.quantity}</td>
-                                        <td className="px-6 py-4 text-right text-sm text-gray-600">
-                                            ₹{part.spare_part_unit_price?.toFixed(2)}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-medium text-gray-900">
-                                            ₹{(part.quantity * part.spare_part_unit_price).toFixed(2)}
+                                        <td className="px-6 py-4 text-right">
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700">
+                                                {part.quantity}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
@@ -422,23 +409,6 @@ const IndentDetailPage = () => {
                     </div>
                 )}
 
-                {/* Total Section */}
-                {indent.parts && indent.parts.length > 0 && (
-                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-                        <div className="flex justify-end">
-                            <div className="w-64">
-                                <div className="flex justify-between items-center py-2">
-                                    <span className="text-sm text-gray-600">Subtotal:</span>
-                                    <span className="font-medium text-gray-900">₹{calculateTotal().toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between items-center py-2 border-t border-gray-200">
-                                    <span className="text-base font-bold text-gray-900">Total:</span>
-                                    <span className="text-lg font-bold text-gray-900">₹{calculateTotal().toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Add Part Modal */}
@@ -476,14 +446,13 @@ const IndentDetailPage = () => {
                                                     }`}
                                                 >
                                                     <div className="flex justify-between items-start">
-                                                        <div>
+                                                        <div className="flex-1">
                                                             <p className="font-medium text-gray-900">{part.part_name}</p>
                                                             <p className="text-sm text-gray-500">{part.part_number}</p>
                                                             {part.description && (
                                                                 <p className="text-xs text-gray-400 mt-1">{part.description}</p>
                                                             )}
                                                         </div>
-                                                        <span className="text-sm font-medium text-gray-900">₹{part.unit_price?.toFixed(2)}</span>
                                                     </div>
                                                 </div>
                                             ))
@@ -540,8 +509,10 @@ const IndentDetailPage = () => {
                         <form onSubmit={handleUpdatePart} className="p-6 space-y-4">
                             <div>
                                 <p className="text-sm text-gray-500 mb-1">Part</p>
-                                <p className="font-medium text-gray-900">{editingPart.spare_part_name}</p>
-                                <p className="text-xs text-gray-500">{editingPart.spare_part_number}</p>
+                                <p className="font-medium text-gray-900">{editingPart.part_name}</p>
+                                {editingPart.description && (
+                                    <p className="text-xs text-gray-500 mt-1">{editingPart.description}</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
