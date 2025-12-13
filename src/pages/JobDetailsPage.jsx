@@ -4,7 +4,7 @@ import {
     ArrowLeft, User, Watch, AlertTriangle, Image as ImageIcon,
     Calendar, DollarSign, Clock, CheckCircle, XCircle,
     MessageSquare, ClipboardCheck, Pencil, Trash2, X, ClipboardList,
-    Download, ZoomIn
+    Download, ZoomIn, Package, ChevronRight
 } from 'lucide-react';
 import api from '../services/api';
 import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelector';
@@ -17,6 +17,7 @@ const JobDetailsPage = () => {
     const [job, setJob] = useState(null);
     const [customer, setCustomer] = useState(null);
     const [watch, setWatch] = useState(null);
+    const [indents, setIndents] = useState([]);
     const [conditions, setConditions] = useState([]);
     const [complaints, setComplaints] = useState([]);
     const [attachments, setAttachments] = useState([]);
@@ -50,17 +51,12 @@ const JobDetailsPage = () => {
                 const jobData = jobRes.data;
                 setJob(jobData);
 
-                // 2. Fetch Customer
-                if (jobData.customer_id) {
-                    try {
-                        const customerRes = await api.get(`/api/v1/customers/${jobData.customer_id}`);
-                        if (mounted) setCustomer(customerRes.data);
-                    } catch (err) {
-                        console.warn("Error fetching customer:", err);
-                    }
+                // 2. Extract Customer from embedded data
+                if (jobData.customer) {
+                    if (mounted) setCustomer(jobData.customer);
                 }
 
-                // 3. Fetch Watch
+                // 3. Extract Watch from embedded data
                 let watchData = jobData.watch;
 
                 if (!watchData) {
@@ -74,9 +70,18 @@ const JobDetailsPage = () => {
 
                 if (mounted && watchData) {
                     setWatch(watchData);
+                }
+
+                // 4. Extract Indents from embedded data
+                if (jobData.indents && Array.isArray(jobData.indents)) {
+                    if (mounted) setIndents(jobData.indents);
+                }
+
+                // 5. Fetch watch-related data (conditions, complaints, attachments)
+                if (mounted && watchData) {
                     const watchId = watchData.id;
 
-                    // 4. Fetch Conditions
+                    // 5a. Fetch Conditions
                     try {
                         const conditionsRes = await api.get(`/api/v1/conditions/watch-conditions/watch/${watchId}`);
                         if (mounted) setConditions(conditionsRes.data);
@@ -84,7 +89,7 @@ const JobDetailsPage = () => {
                         console.warn("Error fetching conditions:", err);
                     }
 
-                    // 5. Fetch Complaints
+                    // 5b. Fetch Complaints
                     try {
                         const complaintsRes = await api.get(`/api/v1/complaints/watch-complaints/watch/${watchId}`);
                         if (mounted) setComplaints(complaintsRes.data);
@@ -92,7 +97,7 @@ const JobDetailsPage = () => {
                         console.warn("Error fetching complaints:", err);
                     }
 
-                    // 5. Fetch Attachments
+                    // 5c. Fetch Attachments
                     try {
                         const attachmentsRes = await api.get(`/api/v1/watches/${watchId}/attachments`);
                         if (mounted) setAttachments(attachmentsRes.data);
@@ -208,6 +213,7 @@ const JobDetailsPage = () => {
         { id: 'watch', label: 'Watch Details', icon: Watch },
         { id: 'issues', label: 'Issues & Conditions', icon: AlertTriangle },
         { id: 'images', label: 'Images', icon: ImageIcon },
+        { id: 'indents', label: 'Indents & Parts', icon: Package },
     ];
 
     // Actions
@@ -703,8 +709,8 @@ const JobDetailsPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div className="flex justify-between py-2 border-b border-gray-100">
-                                    <span className="text-gray-500">Brand ID</span>
-                                    <span className="font-medium text-gray-900">{watch.brand_id}</span>
+                                    <span className="text-gray-500">Brand</span>
+                                    <span className="font-medium text-gray-900">{watch.brand?.name || watch.brand_id || '-'}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100">
                                     <span className="text-gray-500">Model Number</span>
@@ -891,6 +897,91 @@ const JobDetailsPage = () => {
                         <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
                             <ImageIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                             <p className="text-gray-500">No images attached to this job.</p>
+                        </div>
+                    )}
+                </section>
+
+                {/* Indents & Parts Section */}
+                <section 
+                    id="indents" 
+                    ref={el => sectionRefs.current.indents = el}
+                    className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24"
+                >
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Indents & Parts</h2>
+                    {indents.length > 0 ? (
+                        <div className="space-y-4">
+                            {indents.map((indent) => (
+                                <div 
+                                    key={indent.id}
+                                    onClick={() => navigate(`/indents/${indent.id}`)}
+                                    className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group"
+                                >
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1 space-y-3">
+                                            {/* Header Row */}
+                                            <div className="flex items-center gap-3 flex-wrap">
+                                                <div className="flex items-center gap-2">
+                                                    <Package className="w-5 h-5 text-blue-600" />
+                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                        Indent #{indent.serial_number || indent.id}
+                                                    </h3>
+                                                </div>
+                                                {indent.parts && indent.parts.length > 0 && (
+                                                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                                        {indent.parts.length} {indent.parts.length === 1 ? 'Part' : 'Parts'}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Supplier and Details */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1">Supplier</p>
+                                                    <p className="font-medium text-gray-900">
+                                                        {indent.supplier?.name || 'N/A'}
+                                                    </p>
+                                                    {indent.supplier?.contact_number && (
+                                                        <p className="text-sm text-gray-500 mt-0.5">
+                                                            {indent.supplier.contact_number}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1">Created Date</p>
+                                                    <p className="font-medium text-gray-900">
+                                                        {indent.created_at ? new Date(indent.created_at).toLocaleDateString() : '-'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1">Last Updated</p>
+                                                    <p className="font-medium text-gray-900">
+                                                        {indent.updated_at ? new Date(indent.updated_at).toLocaleDateString() : '-'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Notes */}
+                                            {indent.notes && (
+                                                <div className="pt-2 border-t border-gray-100">
+                                                    <p className="text-xs text-gray-500 mb-1">Notes</p>
+                                                    <p className="text-sm text-gray-700">{indent.notes}</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Arrow Icon */}
+                                        <div className="flex items-center">
+                                            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                            <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500">No indents created for this job yet.</p>
+                            <p className="text-sm text-gray-400 mt-2">Indents will appear here once parts are ordered.</p>
                         </div>
                     )}
                 </section>
