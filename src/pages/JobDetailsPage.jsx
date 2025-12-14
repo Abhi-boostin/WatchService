@@ -4,10 +4,12 @@ import {
     ArrowLeft, User, Watch, AlertTriangle, Image as ImageIcon,
     Calendar, DollarSign, Clock, CheckCircle, XCircle,
     MessageSquare, ClipboardCheck, Pencil, Trash2, X, ClipboardList,
-    Download, ZoomIn, Package, ChevronRight, FileText
+    Download, ZoomIn, Package, ChevronRight, FileText, History
 } from 'lucide-react';
 import api from '../services/api';
+import { auditService } from '../services/api';
 import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelector';
+import AuditTimeline from '../components/common/AuditTimeline';
 import { exportJobPDF } from '../services/pdfService';
 import { getErrorMessage } from '../utils/errorUtils';
 
@@ -26,6 +28,17 @@ const JobDetailsPage = () => {
     const [brands, setBrands] = useState([]);
     const [availableComplaints, setAvailableComplaints] = useState([]);
     const [availableConditions, setAvailableConditions] = useState([]);
+    
+    // User state for permissions
+    const [currentUser, setCurrentUser] = useState(null);
+    
+    // Audit history state - standalone modal
+    const [showAuditModal, setShowAuditModal] = useState(false);
+    const [auditEvents, setAuditEvents] = useState([]);
+    const [auditLoading, setAuditLoading] = useState(false);
+    const [auditError, setAuditError] = useState(null);
+    const [auditPage, setAuditPage] = useState(1);
+    const [auditTotalPages, setAuditTotalPages] = useState(1);
 
     // Refs for scroll spy
     const sectionRefs = React.useRef({});
@@ -40,6 +53,19 @@ const JobDetailsPage = () => {
     const [formData, setFormData] = useState({});
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [isExportingPDF, setIsExportingPDF] = useState(false);
+
+    // Fetch current user for permissions
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const response = await api.get('/api/v1/auth/me');
+                setCurrentUser(response.data);
+            } catch (error) {
+                console.error("Failed to fetch current user:", error);
+            }
+        };
+        fetchCurrentUser();
+    }, []);
 
     useEffect(() => {
         let mounted = true;
@@ -271,6 +297,43 @@ const JobDetailsPage = () => {
     const closeModal = () => {
         setModalType(null);
         setFormData({});
+        setEditTab('job'); // Reset to default tab
+    };
+    
+    // Audit history functions
+    const handleOpenAuditModal = () => {
+        setShowAuditModal(true);
+        fetchAuditHistory(1);
+    };
+    
+    const handleCloseAuditModal = () => {
+        setShowAuditModal(false);
+        setAuditEvents([]);
+        setAuditError(null);
+        setAuditPage(1);
+    };
+    
+    // Fetch audit history
+    const fetchAuditHistory = async (page = 1) => {
+        if (!job) return;
+        
+        setAuditLoading(true);
+        setAuditError(null);
+        try {
+            const response = await auditService.getJobAuditHistory(job.id, page, 20);
+            setAuditEvents(response || []);
+            setAuditTotalPages(response && response.length === 20 ? page + 1 : page);
+        } catch (error) {
+            console.error("Failed to fetch audit history:", error);
+            setAuditError(getErrorMessage(error, "Failed to load audit history"));
+        } finally {
+            setAuditLoading(false);
+        }
+    };
+    
+    const handleAuditPageChange = (newPage) => {
+        setAuditPage(newPage);
+        fetchAuditHistory(newPage);
     };
 
     // Toggle handlers for hierarchical node selection
@@ -554,6 +617,16 @@ const JobDetailsPage = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                     {/* Primary Actions */}
                     <div className="flex flex-wrap gap-2 flex-1">
+                        {currentUser && (currentUser.is_admin || currentUser.is_manager) && (
+                            <button
+                                onClick={handleOpenAuditModal}
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm font-medium text-sm"
+                            >
+                                <History size={16} />
+                                <span className="hidden sm:inline">View History</span>
+                                <span className="sm:hidden">History</span>
+                            </button>
+                        )}
                         <button
                             onClick={openEditModal}
                             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm font-medium text-sm"
@@ -1504,6 +1577,33 @@ const JobDetailsPage = () => {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Audit History Modal */}
+            {showAuditModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCloseAuditModal}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <History size={20} />
+                                Job History
+                            </h3>
+                            <button onClick={handleCloseAuditModal} className="text-gray-400 hover:text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden min-h-0">
+                            <AuditTimeline
+                                events={auditEvents}
+                                loading={auditLoading}
+                                error={auditError}
+                                currentPage={auditPage}
+                                totalPages={auditTotalPages}
+                                onPageChange={handleAuditPageChange}
+                            />
                         </div>
                     </div>
                 </div>

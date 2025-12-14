@@ -76,4 +76,25 @@ export const dashboardService = {
     },
 };
 
+export const auditService = {
+    getJobAuditHistory: async (jobId, page = 1, pageSize = 20) => {
+        const response = await api.get(`/api/v1/audit/jobs/${jobId}/history`, {
+            params: { page, page_size: pageSize }
+        });
+        return response.data;
+    },
+    getIndentAuditHistory: async (indentId, page = 1, pageSize = 20) => {
+        const response = await api.get(`/api/v1/audit/indents/${indentId}/history`, {
+            params: { page, page_size: pageSize }
+        });
+        return response.data;
+    },
+    getUserAuditActions: async (userId, page = 1, pageSize = 20) => {
+        const response = await api.get(`/api/v1/audit/users/${userId}/actions`, {
+            params: { page, page_size: pageSize }
+        });
+        return response.data;
+    },
+};
+
 export default api;

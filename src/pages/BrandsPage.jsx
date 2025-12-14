@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Tag, Edit, Trash2, FileText } from 'lucide-react';
 import api from '../services/api';
-import { getErrorMessage } from '../utils/errorUtils';
 
 const BrandsPage = () => {
     const [brands, setBrands] = useState([]);
@@ -69,7 +68,7 @@ const BrandsPage = () => {
             fetchBrands();
         } catch (error) {
             console.error("Error saving brand:", error);
-            alert(getErrorMessage(error, "Failed to save brand"));
+            alert("Failed to save brand");
         }
     };
 

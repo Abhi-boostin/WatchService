@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, X, UserCog } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, UserCog, History } from 'lucide-react';
 import api from '../services/api';
+import { auditService } from '../services/api';
 import { getErrorMessage } from '../utils/errorUtils';
+import AuditTimeline from '../components/common/AuditTimeline';
 
 const UsersPage = () => {
     const [users, setUsers] = useState([]);
@@ -20,10 +22,33 @@ const UsersPage = () => {
         is_manager: false,
         is_active: true
     });
+    
+    // Current user for permissions
+    const [currentUser, setCurrentUser] = useState(null);
+    
+    // Audit history state
+    const [showAuditModal, setShowAuditModal] = useState(false);
+    const [auditUserId, setAuditUserId] = useState(null);
+    const [auditUserName, setAuditUserName] = useState('');
+    const [auditEvents, setAuditEvents] = useState([]);
+    const [auditLoading, setAuditLoading] = useState(false);
+    const [auditError, setAuditError] = useState(null);
+    const [auditPage, setAuditPage] = useState(1);
+    const [auditTotalPages, setAuditTotalPages] = useState(1);
 
     useEffect(() => {
         fetchUsers();
+        fetchCurrentUser();
     }, []);
+    
+    const fetchCurrentUser = async () => {
+        try {
+            const response = await api.get('/api/v1/auth/me');
+            setCurrentUser(response.data);
+        } catch (error) {
+            console.error("Failed to fetch current user:", error);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -130,6 +155,45 @@ const UsersPage = () => {
         }
         return <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-500">Inactive</span>;
     };
+    
+    // Audit history functions
+    const handleOpenAuditModal = (user) => {
+        setAuditUserId(user.id);
+        setAuditUserName(user.full_name || user.username);
+        setShowAuditModal(true);
+        fetchAuditHistory(user.id, 1);
+    };
+    
+    const handleCloseAuditModal = () => {
+        setShowAuditModal(false);
+        setAuditUserId(null);
+        setAuditUserName('');
+        setAuditEvents([]);
+        setAuditError(null);
+        setAuditPage(1);
+    };
+    
+    const fetchAuditHistory = async (userId, page = 1) => {
+        setAuditLoading(true);
+        setAuditError(null);
+        try {
+            const response = await auditService.getUserAuditActions(userId, page, 20);
+            setAuditEvents(response || []);
+            setAuditTotalPages(response && response.length === 20 ? page + 1 : page);
+        } catch (error) {
+            console.error("Failed to fetch audit history:", error);
+            setAuditError(getErrorMessage(error, "Failed to load user activity log"));
+        } finally {
+            setAuditLoading(false);
+        }
+    };
+    
+    const handleAuditPageChange = (newPage) => {
+        setAuditPage(newPage);
+        if (auditUserId) {
+            fetchAuditHistory(auditUserId, newPage);
+        }
+    };
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -193,14 +257,26 @@ const UsersPage = () => {
                                         {getStatusBadge(user)}
                                     </td>
                                     <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
-                                        <button
-                                            onClick={() => handleOpenEdit(user)}
-                                            className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
-                                            title="Edit User"
-                                            aria-label="Edit user"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            {currentUser && currentUser.is_admin && (
+                                                <button
+                                                    onClick={() => handleOpenAuditModal(user)}
+                                                    className="p-2.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors touch-manipulation"
+                                                    title="View Activity Log"
+                                                    aria-label="View user activity log"
+                                                >
+                                                    <History size={18} />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleOpenEdit(user)}
+                                                className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
+                                                title="Edit User"
+                                                aria-label="Edit user"
+                                            >
+                                                <Pencil size={18} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -335,6 +411,33 @@ const UsersPage = () => {
                                 </div>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            
+            {/* Audit History Modal */}
+            {showAuditModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCloseAuditModal}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <History size={20} />
+                                Activity Log: {auditUserName}
+                            </h3>
+                            <button onClick={handleCloseAuditModal} className="text-gray-400 hover:text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden min-h-0">
+                            <AuditTimeline
+                                events={auditEvents}
+                                loading={auditLoading}
+                                error={auditError}
+                                currentPage={auditPage}
+                                totalPages={auditTotalPages}
+                                onPageChange={handleAuditPageChange}
+                            />
+                        </div>
                     </div>
                 </div>
             )}

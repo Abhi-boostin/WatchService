@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar, History } from 'lucide-react';
 import api from '../services/api';
+import { auditService } from '../services/api';
 import { exportIndentPDF } from '../services/pdfService';
 import { getErrorMessage } from '../utils/errorUtils';
+import AuditTimeline from '../components/common/AuditTimeline';
 
 const IndentDetailPage = () => {
     const { id } = useParams();
@@ -33,6 +35,30 @@ const IndentDetailPage = () => {
 
     // PDF export state
     const [isExportingPDF, setIsExportingPDF] = useState(false);
+    
+    // User state for permissions
+    const [currentUser, setCurrentUser] = useState(null);
+    
+    // Audit history state
+    const [showAuditModal, setShowAuditModal] = useState(false);
+    const [auditEvents, setAuditEvents] = useState([]);
+    const [auditLoading, setAuditLoading] = useState(false);
+    const [auditError, setAuditError] = useState(null);
+    const [auditPage, setAuditPage] = useState(1);
+    const [auditTotalPages, setAuditTotalPages] = useState(1);
+
+    // Fetch current user for permissions
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const response = await api.get('/api/v1/auth/me');
+                setCurrentUser(response.data);
+            } catch (error) {
+                console.error("Failed to fetch current user:", error);
+            }
+        };
+        fetchCurrentUser();
+    }, []);
 
     useEffect(() => {
         fetchIndentDetails();
@@ -159,6 +185,41 @@ const IndentDetailPage = () => {
             alert(getErrorMessage(error, "Failed to delete indent"));
         }
     };
+    
+    // Audit history functions
+    const handleOpenAuditModal = () => {
+        setShowAuditModal(true);
+        fetchAuditHistory(1);
+    };
+    
+    const handleCloseAuditModal = () => {
+        setShowAuditModal(false);
+        setAuditEvents([]);
+        setAuditError(null);
+        setAuditPage(1);
+    };
+    
+    const fetchAuditHistory = async (page = 1) => {
+        if (!indent) return;
+        
+        setAuditLoading(true);
+        setAuditError(null);
+        try {
+            const response = await auditService.getIndentAuditHistory(indent.id, page, 20);
+            setAuditEvents(response || []);
+            setAuditTotalPages(response && response.length === 20 ? page + 1 : page);
+        } catch (error) {
+            console.error("Failed to fetch audit history:", error);
+            setAuditError(getErrorMessage(error, "Failed to load audit history"));
+        } finally {
+            setAuditLoading(false);
+        }
+    };
+    
+    const handleAuditPageChange = (newPage) => {
+        setAuditPage(newPage);
+        fetchAuditHistory(newPage);
+    };
 
     const handleExportPDF = async () => {
         if (!indent) {
@@ -229,6 +290,15 @@ const IndentDetailPage = () => {
                     <div className="flex gap-2">
                         {!editMode && (
                             <>
+                                {currentUser && (currentUser.is_admin || currentUser.is_manager) && (
+                                    <button
+                                        onClick={handleOpenAuditModal}
+                                        className="flex items-center gap-2 px-4 py-2 text-blue-600 bg-white border border-blue-200 rounded-xl hover:bg-blue-50"
+                                    >
+                                        <History size={18} />
+                                        View History
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => setEditMode(true)}
                                     className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50"
@@ -578,6 +648,33 @@ const IndentDetailPage = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            
+            {/* Audit History Modal */}
+            {showAuditModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCloseAuditModal}>
+                    <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <History size={20} />
+                                Indent History
+                            </h3>
+                            <button onClick={handleCloseAuditModal} className="text-gray-400 hover:text-gray-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-hidden min-h-0">
+                            <AuditTimeline
+                                events={auditEvents}
+                                loading={auditLoading}
+                                error={auditError}
+                                currentPage={auditPage}
+                                totalPages={auditTotalPages}
+                                onPageChange={handleAuditPageChange}
+                            />
+                        </div>
                     </div>
                 </div>
             )}
