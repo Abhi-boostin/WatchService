@@ -127,7 +127,7 @@ const PricingRulesPage = () => {
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Complaint</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Price %</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Labour %</th>
-                            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="sticky right-0 bg-gray-50/50 px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -141,7 +141,7 @@ const PricingRulesPage = () => {
                             </tr>
                         ) : (
                             rules.map((rule) => (
-                                <tr key={rule.id} className="hover:bg-gray-50/50 transition-colors">
+                                <tr key={rule.id} className="hover:bg-gray-50/50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="font-medium text-gray-900">{rule.complaint_node_label || `Node #${rule.complaint_node_id}`}</span>
                                     </td>
@@ -151,17 +151,21 @@ const PricingRulesPage = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         {rule.labour_percentage}%
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                    <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                                         <div className="flex items-center justify-end gap-2">
                                             <button
                                                 onClick={() => handleOpenEdit(rule)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
+                                                title="Edit Rule"
+                                                aria-label="Edit pricing rule"
                                             >
                                                 <Pencil size={18} />
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(rule.id)}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors touch-manipulation"
+                                                title="Delete Rule"
+                                                aria-label="Delete pricing rule"
                                             >
                                                 <Trash2 size={18} />
                                             </button>

@@ -141,9 +141,9 @@ const SparePartsPage = () => {
                         <tr>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Part Name</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Part Number</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Description</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit Price</th>
-                            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="sticky right-0 bg-gray-50/50 px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -157,7 +157,7 @@ const SparePartsPage = () => {
                             </tr>
                         ) : (
                             parts.map((part) => (
-                                <tr key={part.id} className="hover:bg-gray-50/50 transition-colors">
+                                <tr key={part.id} className="hover:bg-gray-50/50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
@@ -169,23 +169,27 @@ const SparePartsPage = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         {part.part_number}
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                                    <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate hidden xl:table-cell">
                                         {part.description || '-'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         ₹{part.unit_price?.toFixed(2)}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                    <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                                         <div className="flex items-center justify-end gap-2">
                                             <button
                                                 onClick={() => handleOpenEdit(part)}
-                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
+                                                title="Edit Part"
+                                                aria-label="Edit spare part"
                                             >
                                                 <Pencil size={18} />
                                             </button>
                                             <button
                                                 onClick={() => handleDelete(part.id)}
-                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors touch-manipulation"
+                                                title="Delete Part"
+                                                aria-label="Delete spare part"
                                             >
                                                 <Trash2 size={18} />
                                             </button>

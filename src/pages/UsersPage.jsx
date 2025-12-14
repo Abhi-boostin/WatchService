@@ -156,7 +156,7 @@ const UsersPage = () => {
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th className="sticky right-0 bg-gray-50/50 px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -170,7 +170,7 @@ const UsersPage = () => {
                             </tr>
                         ) : (
                             users.map((user) => (
-                                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
@@ -193,10 +193,12 @@ const UsersPage = () => {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         {getStatusBadge(user)}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                    <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                                         <button
                                             onClick={() => handleOpenEdit(user)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
+                                            title="Edit User"
+                                            aria-label="Edit user"
                                         >
                                             <Pencil size={18} />
                                         </button>

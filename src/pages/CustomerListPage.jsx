@@ -148,11 +148,12 @@ const CustomerListPage = () => {
                                 <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-semibold text-lg group-hover:scale-110 transition-transform">
                                     {customer.name.charAt(0).toUpperCase()}
                                 </div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-2">
                                     <button
                                         onClick={(e) => openDeleteModal(customer, e)}
-                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                        className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all touch-manipulation"
                                         title="Delete Customer"
+                                        aria-label="Delete customer"
                                     >
                                         <Trash2 size={18} />
                                     </button>

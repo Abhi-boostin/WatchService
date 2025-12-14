@@ -851,7 +851,10 @@ const JobDetailsPage = () => {
                                                 <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                                                 <div>
                                                     <p className="font-medium text-gray-900">
-                                                        {item.complaint_node?.label || `Complaint ID: ${item.complaint_node_id}`}
+                                                        {item.complaint_node?.parent_label 
+                                                            ? `${item.complaint_node.parent_label} - ${item.complaint_node.label}`
+                                                            : item.complaint_node?.label || `Complaint ID: ${item.complaint_node_id}`
+                                                        }
                                                     </p>
                                                     {item.notes && <p className="text-sm text-gray-600 mt-1">{item.notes}</p>}
                                                 </div>
@@ -880,7 +883,10 @@ const JobDetailsPage = () => {
                                                 <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
                                                 <div>
                                                     <p className="font-medium text-gray-900">
-                                                        {item.condition_node?.label || `Condition ID: ${item.condition_node_id}`}
+                                                        {item.condition_node?.parent_label 
+                                                            ? `${item.condition_node.parent_label} - ${item.condition_node.label}`
+                                                            : item.condition_node?.label || `Condition ID: ${item.condition_node_id}`
+                                                        }
                                                     </p>
                                                     {item.notes && <p className="text-sm text-gray-600 mt-1">{item.notes}</p>}
                                                 </div>

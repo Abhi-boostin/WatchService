@@ -12,6 +12,7 @@ const IndentsPage = () => {
     const [pageSize] = useState(20);
 
     // Filters
+    const [search, setSearch] = useState('');
     const [filterJobId, setFilterJobId] = useState('');
     const [filterSupplierId, setFilterSupplierId] = useState('');
     const [showFilters, setShowFilters] = useState(false);
@@ -30,7 +31,7 @@ const IndentsPage = () => {
 
     useEffect(() => {
         fetchIndents();
-    }, [page, filterJobId, filterSupplierId]);
+    }, [page, search, filterJobId, filterSupplierId]);
 
     useEffect(() => {
         if (showFilters) {
@@ -42,6 +43,7 @@ const IndentsPage = () => {
         setLoading(true);
         try {
             let url = `/api/v1/indents?page=${page}&page_size=${pageSize}`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
             if (filterJobId) url += `&job_id=${filterJobId}`;
             if (filterSupplierId) url += `&supplier_id=${filterSupplierId}`;
 
@@ -169,22 +171,32 @@ const IndentsPage = () => {
                 </button>
             </div>
 
-            {/* Filters */}
+            {/* Search and Filters */}
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col md:flex-row gap-4 mb-4">
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search by Indent #, Job #, or Supplier..."
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all"
+                        />
+                    </div>
                     <button
                         onClick={() => setShowFilters(!showFilters)}
-                        className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         <Filter size={16} />
                         {showFilters ? 'Hide Filters' : 'Show Filters'}
                     </button>
-                    {(filterJobId || filterSupplierId) && (
+                    {(search || filterJobId || filterSupplierId) && (
                         <button
-                            onClick={handleClearFilters}
-                            className="text-sm text-blue-600 hover:text-blue-700"
+                            onClick={() => { setSearch(''); handleClearFilters(); }}
+                            className="text-sm text-blue-600 hover:text-blue-700 px-4 py-2.5"
                         >
-                            Clear Filters
+                            Clear All
                         </button>
                     )}
                 </div>
@@ -225,65 +237,76 @@ const IndentsPage = () => {
                 )}
             </div>
 
-            {/* Indents List */}
+            {/* Indents Table */}
             {loading ? (
                 <div className="flex justify-center py-12">
                     <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
             ) : indents.length > 0 ? (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {indents.map((indent) => (
-                            <div
-                                key={indent.id}
-                                onClick={() => handleViewIndent(indent.id)}
-                                className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-                            >
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
-                                            <FileText size={20} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-gray-900">{indent.serial_number}</h3>
-                                            <p className="text-sm text-gray-500">
-                                                {jobs[indent.job_id]?.job_number || `Job #${indent.job_id}`}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleViewIndent(indent.id);
-                                        }}
-                                        className="p-2 text-gray-400 group-hover:text-blue-600 group-hover:bg-blue-50 rounded-lg transition-colors"
-                                        title="View Details"
-                                    >
-                                        <Eye size={18} />
-                                    </button>
-                                </div>
-
-                                <div className="space-y-2 text-sm text-gray-600 mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <Truck size={14} className="text-gray-400" />
-                                        {suppliers[indent.supplier_id]?.name || 'No supplier'}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Calendar size={14} className="text-gray-400" />
-                                        {new Date(indent.created_at).toLocaleDateString()}
-                                    </div>
-                                    {indent.notes && (
-                                        <p className="text-gray-500 italic mt-2 line-clamp-2">"{indent.notes}"</p>
-                                    )}
-                                </div>
-
-                                <div className="pt-4 border-t border-gray-100">
-                                    <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full">
-                                        Indent Order
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50/50 border-b border-gray-100">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Indent #</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Job #</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Supplier</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Date</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Notes</th>
+                                        <th className="sticky right-0 bg-gray-50/50 px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {indents.map((indent) => (
+                                        <tr
+                                            key={indent.id}
+                                            onClick={() => handleViewIndent(indent.id)}
+                                            className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                                                        <FileText size={18} />
+                                                    </div>
+                                                    <span className="font-mono text-sm font-medium text-gray-900">{indent.serial_number}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className="text-sm font-medium text-gray-900">
+                                                    {jobs[indent.job_id]?.job_number || `Job #${indent.job_id}`}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <Truck size={14} className="text-gray-400" />
+                                                    <span className="text-sm text-gray-900">{suppliers[indent.supplier_id]?.name || 'No supplier'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden xl:table-cell">
+                                                {new Date(indent.created_at).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate hidden lg:table-cell">
+                                                {indent.notes || '-'}
+                                            </td>
+                                            <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleViewIndent(indent.id);
+                                                    }}
+                                                    className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all touch-manipulation"
+                                                    title="View Details"
+                                                    aria-label="View indent details"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     {/* Pagination */}
@@ -317,14 +340,16 @@ const IndentsPage = () => {
                         <FileText size={32} className="text-gray-400" />
                     </div>
                     <p className="text-gray-500 mb-4">
-                        {filterJobId || filterSupplierId ? 'No indents found matching your filters' : 'No indents found'}
+                        {search || filterJobId || filterSupplierId ? 'No indents found matching your search or filters' : 'No indents found'}
                     </p>
-                    <button
-                        onClick={handleOpenCreateModal}
-                        className="text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                        Create your first indent
-                    </button>
+                    {!search && !filterJobId && !filterSupplierId && (
+                        <button
+                            onClick={handleOpenCreateModal}
+                            className="text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                            Create your first indent
+                        </button>
+                    )}
                 </div>
             )}
 
