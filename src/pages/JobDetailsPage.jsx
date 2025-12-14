@@ -657,42 +657,93 @@ const JobDetailsPage = () => {
                             )}
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Job Summary</h3>
-                            <div className="space-y-4">
-                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                    <span className="text-gray-500">Estimated Cost</span>
-                                    <span className="font-medium text-gray-900">₹{job.estimated_cost || '0.00'}</span>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
+                            <div className="space-y-3">
+                                {/* Base Costs */}
+                                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                                    <div className="flex justify-between py-1.5">
+                                        <span className="text-sm text-gray-600">Parts Cost</span>
+                                        <span className="font-medium text-gray-900">₹{job.estimated_parts_cost || '0.00'}</span>
+                                    </div>
+                                    <div className="flex justify-between py-1.5">
+                                        <span className="text-sm text-gray-600">Labour Cost</span>
+                                        <span className="font-medium text-gray-900">₹{job.estimated_labour_cost || '0.00'}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                    <span className="text-gray-500">Est. Parts Cost</span>
-                                    <span className="font-medium text-gray-900">₹{job.estimated_parts_cost || '0.00'}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                    <span className="text-gray-500">Est. Labour Cost</span>
-                                    <span className="font-medium text-gray-900">₹{job.estimated_labour_cost || '0.00'}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                    <span className="text-gray-500">Delivery Date</span>
-                                    <span className="font-medium text-gray-900">
-                                        {job.estimated_delivery_date ? new Date(job.estimated_delivery_date).toLocaleDateString() : '-'}
-                                    </span>
-                                </div>
-                                {job.original_estimated_delivery_date && job.original_estimated_delivery_date !== job.estimated_delivery_date && (
-                                    <div className="flex justify-between py-2 border-b border-gray-100">
-                                        <span className="text-gray-500">Original Est. Date</span>
-                                        <span className="font-medium text-gray-500 line-through">
-                                            {new Date(job.original_estimated_delivery_date).toLocaleDateString()}
-                                        </span>
+
+                                {/* Additional Charges */}
+                                {job.additional_charge && parseFloat(job.additional_charge) > 0 && (
+                                    <div className="bg-green-50 rounded-lg p-3 border border-green-100">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <span className="text-sm font-medium text-green-700">Additional Charges</span>
+                                                {job.additional_charge_note && (
+                                                    <p className="text-xs text-green-600 mt-0.5">{job.additional_charge_note}</p>
+                                                )}
+                                            </div>
+                                            <span className="font-medium text-green-700">+₹{job.additional_charge}</span>
+                                        </div>
                                     </div>
                                 )}
-                                {job.delay_reason && (
-                                    <div className="py-2 border-b border-gray-100">
-                                        <span className="text-gray-500 block mb-1">Delay Reason</span>
-                                        <span className="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                                            {job.delay_reason}
-                                        </span>
+
+                                {/* Deductions */}
+                                {job.deduction && parseFloat(job.deduction) > 0 && (
+                                    <div className="bg-red-50 rounded-lg p-3 border border-red-100">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <span className="text-sm font-medium text-red-700">Deductions</span>
+                                                {job.deduction_note && (
+                                                    <p className="text-xs text-red-600 mt-0.5">{job.deduction_note}</p>
+                                                )}
+                                            </div>
+                                            <span className="font-medium text-red-700">-₹{job.deduction}</span>
+                                        </div>
                                     </div>
                                 )}
+
+                                {/* Total */}
+                                <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-200 mt-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-semibold text-blue-900">Estimated Total</span>
+                                        <span className="text-lg font-bold text-blue-700">₹{job.estimated_cost || '0.00'}</span>
+                                    </div>
+                                </div>
+
+                                {/* Actual Cost if different */}
+                                {job.actual_cost && parseFloat(job.actual_cost) > 0 && (
+                                    <div className="bg-purple-50 rounded-lg p-3 border border-purple-200 mt-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm font-semibold text-purple-900">Actual Cost</span>
+                                            <span className="text-lg font-bold text-purple-700">₹{job.actual_cost}</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Delivery Information */}
+                                <div className="pt-3 mt-3 border-t border-gray-200">
+                                    <div className="flex justify-between py-2">
+                                        <span className="text-sm text-gray-600">Delivery Date</span>
+                                        <span className="font-medium text-gray-900">
+                                            {job.estimated_delivery_date ? new Date(job.estimated_delivery_date).toLocaleDateString() : '-'}
+                                        </span>
+                                    </div>
+                                    {job.original_estimated_delivery_date && job.original_estimated_delivery_date !== job.estimated_delivery_date && (
+                                        <div className="flex justify-between py-2">
+                                            <span className="text-sm text-gray-500">Original Date</span>
+                                            <span className="font-medium text-gray-500 line-through text-sm">
+                                                {new Date(job.original_estimated_delivery_date).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {job.delay_reason && (
+                                        <div className="py-2 mt-2">
+                                            <span className="text-xs text-gray-500 block mb-1">Delay Reason</span>
+                                            <span className="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                                                {job.delay_reason}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1021,20 +1072,198 @@ const JobDetailsPage = () => {
                                     </div>
 
                                     {editTab === 'job' && (
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Est. Cost</label>
-                                                    <input type="number" step="0.01" value={formData.estimated_cost} onChange={e => setFormData({ ...formData, estimated_cost: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Est. Delivery</label>
-                                                    <input type="date" value={formData.estimated_delivery_date?.split('T')[0]} onChange={e => setFormData({ ...formData, estimated_delivery_date: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" />
+                                        <div className="space-y-6">
+                                            {/* Base Costs */}
+                                            <div className="bg-gray-50 rounded-lg p-4">
+                                                <h4 className="text-sm font-semibold text-gray-900 mb-3">Base Costs</h4>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Parts Cost</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                                                            <input 
+                                                                type="number" 
+                                                                step="0.01" 
+                                                                value={formData.estimated_parts_cost || ''} 
+                                                                onChange={e => {
+                                                                    const newFormData = { ...formData, estimated_parts_cost: e.target.value };
+                                                                    const total = (
+                                                                        (parseFloat(newFormData.estimated_parts_cost) || 0) +
+                                                                        (parseFloat(newFormData.estimated_labour_cost) || 0) +
+                                                                        (parseFloat(newFormData.additional_charge) || 0) -
+                                                                        (parseFloat(newFormData.deduction) || 0)
+                                                                    );
+                                                                    newFormData.estimated_cost = total;
+                                                                    setFormData(newFormData);
+                                                                }} 
+                                                                className="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-200" 
+                                                                placeholder="0.00"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Labour Cost</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                                                            <input 
+                                                                type="number" 
+                                                                step="0.01" 
+                                                                value={formData.estimated_labour_cost || ''} 
+                                                                onChange={e => {
+                                                                    const newFormData = { ...formData, estimated_labour_cost: e.target.value };
+                                                                    const total = (
+                                                                        (parseFloat(newFormData.estimated_parts_cost) || 0) +
+                                                                        (parseFloat(newFormData.estimated_labour_cost) || 0) +
+                                                                        (parseFloat(newFormData.additional_charge) || 0) -
+                                                                        (parseFloat(newFormData.deduction) || 0)
+                                                                    );
+                                                                    newFormData.estimated_cost = total;
+                                                                    setFormData(newFormData);
+                                                                }} 
+                                                                className="w-full pl-7 pr-3 py-2 rounded-lg border border-gray-200" 
+                                                                placeholder="0.00"
+                                                            />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
+
+                                            {/* Additional Charges */}
+                                            <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                                                <h4 className="text-sm font-semibold text-green-900 mb-3">Additional Charges</h4>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-green-700 mb-1">Amount</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                                                            <input 
+                                                                type="number" 
+                                                                step="0.01" 
+                                                                value={formData.additional_charge || ''} 
+                                                                onChange={e => {
+                                                                    const newFormData = { ...formData, additional_charge: e.target.value };
+                                                                    const total = (
+                                                                        (parseFloat(newFormData.estimated_parts_cost) || 0) +
+                                                                        (parseFloat(newFormData.estimated_labour_cost) || 0) +
+                                                                        (parseFloat(newFormData.additional_charge) || 0) -
+                                                                        (parseFloat(newFormData.deduction) || 0)
+                                                                    );
+                                                                    newFormData.estimated_cost = total;
+                                                                    setFormData(newFormData);
+                                                                }} 
+                                                                className="w-full pl-7 pr-3 py-2 rounded-lg border border-green-200 bg-white" 
+                                                                placeholder="0.00"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={formData.additional_charge_note || ''} 
+                                                            onChange={e => setFormData({ ...formData, additional_charge_note: e.target.value })} 
+                                                            className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white" 
+                                                            placeholder="e.g., Express service"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Deductions */}
+                                            <div className="bg-red-50 rounded-lg p-4 border border-red-100">
+                                                <h4 className="text-sm font-semibold text-red-900 mb-3">Deductions</h4>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-red-700 mb-1">Amount</label>
+                                                        <div className="relative">
+                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                                                            <input 
+                                                                type="number" 
+                                                                step="0.01" 
+                                                                value={formData.deduction || ''} 
+                                                                onChange={e => {
+                                                                    const newFormData = { ...formData, deduction: e.target.value };
+                                                                    const total = (
+                                                                        (parseFloat(newFormData.estimated_parts_cost) || 0) +
+                                                                        (parseFloat(newFormData.estimated_labour_cost) || 0) +
+                                                                        (parseFloat(newFormData.additional_charge) || 0) -
+                                                                        (parseFloat(newFormData.deduction) || 0)
+                                                                    );
+                                                                    newFormData.estimated_cost = total;
+                                                                    setFormData(newFormData);
+                                                                }} 
+                                                                className="w-full pl-7 pr-3 py-2 rounded-lg border border-red-200 bg-white" 
+                                                                placeholder="0.00"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={formData.deduction_note || ''} 
+                                                            onChange={e => setFormData({ ...formData, deduction_note: e.target.value })} 
+                                                            className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white" 
+                                                            placeholder="e.g., Customer discount"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Total Display */}
+                                            <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm font-semibold text-blue-900">Estimated Total</span>
+                                                    <span className="text-xl font-bold text-blue-700">
+                                                        ₹{(
+                                                            (parseFloat(formData.estimated_parts_cost) || 0) +
+                                                            (parseFloat(formData.estimated_labour_cost) || 0) +
+                                                            (parseFloat(formData.additional_charge) || 0) -
+                                                            (parseFloat(formData.deduction) || 0)
+                                                        ).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Actual Cost */}
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                                                <textarea value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gray-200" rows="3"></textarea>
+                                                <label className="block text-sm font-medium text-purple-700 mb-1">Actual Cost (Final Bill)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.01" 
+                                                        value={formData.actual_cost || ''} 
+                                                        onChange={e => setFormData({ ...formData, actual_cost: e.target.value })} 
+                                                        className="w-full pl-7 pr-3 py-2 rounded-lg border border-purple-200 bg-purple-50" 
+                                                        placeholder="Enter final billed amount"
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-1">This is the actual amount charged to customer (can differ from estimate)</p>
+                                            </div>
+
+                                            {/* Delivery and Notes */}
+                                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Est. Delivery Date</label>
+                                                    <input 
+                                                        type="date" 
+                                                        value={formData.estimated_delivery_date?.split('T')[0]} 
+                                                        onChange={e => setFormData({ ...formData, estimated_delivery_date: e.target.value })} 
+                                                        className="w-full px-3 py-2 rounded-lg border border-gray-200" 
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Job Notes</label>
+                                                <textarea 
+                                                    value={formData.notes || ''} 
+                                                    onChange={e => setFormData({ ...formData, notes: e.target.value })} 
+                                                    className="w-full px-3 py-2 rounded-lg border border-gray-200" 
+                                                    rows="3"
+                                                    placeholder="Additional notes about the job..."
+                                                ></textarea>
                                             </div>
                                         </div>
                                     )}

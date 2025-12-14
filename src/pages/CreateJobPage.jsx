@@ -144,6 +144,12 @@ const CreateJobPage = () => {
             other_issue: '',
             spare_parts: [],
             estimated_cost: '',
+            estimated_parts_cost: '',
+            estimated_labour_cost: '',
+            additional_charge: '',
+            additional_charge_note: '',
+            deduction: '',
+            deduction_note: '',
             estimated_delivery: ''
         },
         images: []
@@ -410,9 +416,10 @@ const CreateJobPage = () => {
                     ...prev,
                     issues: {
                         ...prev.issues,
-                        estimated_cost: parseFloat(estimateData.estimated_total),
-                        // Auto-set delivery to 30 days from now if not already set or if we want to force update
-                        estimated_delivery: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                        estimated_parts_cost: parseFloat(estimateData.total_parts_cost) || 0,
+                        estimated_labour_cost: parseFloat(estimateData.total_labour_cost) || 0,
+                        // Auto-set delivery to 30 days from now if not already set
+                        estimated_delivery: prev.issues.estimated_delivery || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
                     }
                 }));
             }
@@ -563,11 +570,24 @@ const CreateJobPage = () => {
             }
 
             // 6. Update Job with Estimated Delivery, Cost, and Notes
+            const finalEstimatedCost = (
+                (parseFloat(formData.issues.estimated_parts_cost) || 0) +
+                (parseFloat(formData.issues.estimated_labour_cost) || 0) +
+                (parseFloat(formData.issues.additional_charge) || 0) -
+                (parseFloat(formData.issues.deduction) || 0)
+            );
+
             await api.patch(`/api/v1/jobs/${createdJobId}`, {
                 status: 'booked', // Keep status as booked
                 estimated_delivery_date: formData.issues.estimated_delivery,
                 notes: formData.issues.other_issue,
-                estimated_cost: parseFloat(formData.issues.estimated_cost) || 0
+                estimated_cost: finalEstimatedCost,
+                estimated_parts_cost: parseFloat(formData.issues.estimated_parts_cost) || 0,
+                estimated_labour_cost: parseFloat(formData.issues.estimated_labour_cost) || 0,
+                additional_charge: parseFloat(formData.issues.additional_charge) || null,
+                additional_charge_note: formData.issues.additional_charge_note || null,
+                deduction: parseFloat(formData.issues.deduction) || null,
+                deduction_note: formData.issues.deduction_note || null
             });
 
             // Move to next step
