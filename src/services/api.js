@@ -25,6 +25,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Handle 401 Unauthorized
         if (error.response && error.response.status === 401) {
             // Don't redirect if it's a login attempt failure
             if (!error.config.url.includes('/auth/login')) {
@@ -32,6 +33,31 @@ api.interceptors.response.use(
                 window.location.href = '/login';
             }
         }
+        
+        // Handle 422 Validation Errors
+        if (error.response && error.response.status === 422) {
+            const validationError = error.response.data?.error;
+            
+            if (validationError && validationError.fields) {
+                const fields = validationError.fields;
+                const fieldErrors = Object.entries(fields);
+                
+                if (fieldErrors.length === 1) {
+                    // Single error: just show the message
+                    error.displayMessage = fieldErrors[0][1];
+                } else if (fieldErrors.length > 0) {
+                    // Multiple errors: show bulleted list (limit to first 5)
+                    const maxErrors = 5;
+                    const errorsToShow = fieldErrors.slice(0, maxErrors);
+                    const remaining = fieldErrors.length - maxErrors;
+                    
+                    error.displayMessage = 'Validation errors:\n\n' + 
+                        errorsToShow.map(([field, message]) => `• ${message}`).join('\n') +
+                        (remaining > 0 ? `\n\n...and ${remaining} more error${remaining > 1 ? 's' : ''}` : '');
+                }
+            }
+        }
+        
         return Promise.reject(error);
     }
 );

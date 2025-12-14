@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, User, Phone, Mail, MapPin, Plus, Loader2, Trash2, X, AlertTriangle } from 'lucide-react';
 import api from '../services/api';
 import CustomDatePicker from '../components/common/CustomDatePicker';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const CustomerListPage = () => {
     const navigate = useNavigate();
@@ -82,7 +83,7 @@ const CustomerListPage = () => {
             closeModal();
         } catch (error) {
             console.error("Error creating customer:", error);
-            alert("Failed to create customer");
+            alert(getErrorMessage(error, "Failed to create customer"));
         }
     };
 
@@ -93,7 +94,7 @@ const CustomerListPage = () => {
             closeModal();
         } catch (error) {
             console.error("Error deleting customer:", error);
-            alert("Failed to delete customer");
+            alert(getErrorMessage(error, "Failed to delete customer"));
         }
     };
 

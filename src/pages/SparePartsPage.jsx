@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, Search, Package } from 'lucide-react';
 import api from '../services/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const SparePartsPage = () => {
     const [parts, setParts] = useState([]);
@@ -90,7 +91,7 @@ const SparePartsPage = () => {
             setShowModal(false);
         } catch (error) {
             console.error("Error saving spare part:", error);
-            alert("Failed to save spare part");
+            alert(getErrorMessage(error, "Failed to save spare part"));
         }
     };
 
@@ -101,7 +102,7 @@ const SparePartsPage = () => {
             fetchParts();
         } catch (error) {
             console.error("Error deleting spare part:", error);
-            alert("Failed to delete spare part");
+            alert(getErrorMessage(error, "Failed to delete spare part"));
         }
     };
 

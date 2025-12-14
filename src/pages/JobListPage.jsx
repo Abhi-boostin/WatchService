@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Filter, ChevronLeft, ChevronRight, Eye, LayoutGrid, List, Calendar, User, Clock, Trash2, AlertTriangle, X, CheckCircle } from 'lucide-react';
 import api from '../services/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const JobListPage = () => {
     const navigate = useNavigate();
@@ -155,7 +156,7 @@ const JobListPage = () => {
             closeModal();
         } catch (error) {
             console.error("Error deleting job:", error);
-            alert("Failed to delete job");
+            alert(getErrorMessage(error, "Failed to delete job"));
         }
     };
 
@@ -167,7 +168,7 @@ const JobListPage = () => {
             closeModal();
         } catch (error) {
             console.error("Error updating status:", error);
-            alert("Failed to update status");
+            alert(getErrorMessage(error, "Failed to update status"));
         }
     };
 

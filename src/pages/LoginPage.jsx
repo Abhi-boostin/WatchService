@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Lock, Loader2, Watch, Mail } from 'lucide-react';
 import { authService } from '../services/api';
 import loginBg from '../assets/login-bg.png';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const LoginPage = () => {
     const [username, setUsername] = useState('');
@@ -29,16 +30,12 @@ const LoginPage = () => {
             navigate('/dashboard');
         } catch (err) {
             console.error("Login failed:", err);
-            if (err.response) {
-                if (err.response.status === 401) {
-                    setError('Invalid username or password.');
-                } else if (err.response.status === 404) {
-                    setError('User account not found.');
-                } else {
-                    setError('An error occurred. Please try again.');
-                }
+            if (err.response?.status === 401) {
+                setError('Invalid username or password.');
+            } else if (err.response?.status === 404) {
+                setError('User account not found.');
             } else {
-                setError('Network error. Please check your connection.');
+                setError(getErrorMessage(err, 'An error occurred. Please try again.'));
             }
         } finally {
             setIsLoading(false);

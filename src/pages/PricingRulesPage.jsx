@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import api from '../services/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const PricingRulesPage = () => {
     const [rules, setRules] = useState([]);
@@ -89,7 +90,7 @@ const PricingRulesPage = () => {
             setShowModal(false);
         } catch (error) {
             console.error("Error saving pricing rule:", error);
-            alert("Failed to save pricing rule. It might already exist for this complaint.");
+            alert(getErrorMessage(error, "Failed to save pricing rule. It might already exist for this complaint."));
         }
     };
 
@@ -100,7 +101,7 @@ const PricingRulesPage = () => {
             fetchRules();
         } catch (error) {
             console.error("Error deleting pricing rule:", error);
-            alert("Failed to delete pricing rule");
+            alert(getErrorMessage(error, "Failed to delete pricing rule"));
         }
     };
 

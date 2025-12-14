@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar } from 'lucide-react';
 import api from '../services/api';
 import { exportIndentPDF } from '../services/pdfService';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const IndentDetailPage = () => {
     const { id } = useParams();
@@ -59,7 +60,7 @@ const IndentDetailPage = () => {
             });
         } catch (error) {
             console.error("Error fetching indent details:", error);
-            alert("Failed to load indent details");
+            alert(getErrorMessage(error, "Failed to load indent details"));
             navigate('/indents');
         } finally {
             setLoading(false);
@@ -97,7 +98,7 @@ const IndentDetailPage = () => {
             fetchIndentDetails();
         } catch (error) {
             console.error("Error adding part:", error);
-            alert(error.response?.data?.detail || "Failed to add part to indent");
+            alert(getErrorMessage(error, "Failed to add part to indent"));
         }
     };
 
@@ -119,7 +120,7 @@ const IndentDetailPage = () => {
             fetchIndentDetails();
         } catch (error) {
             console.error("Error updating part:", error);
-            alert("Failed to update part quantity");
+            alert(getErrorMessage(error, "Failed to update part quantity"));
         }
     };
 
@@ -131,7 +132,7 @@ const IndentDetailPage = () => {
             fetchIndentDetails();
         } catch (error) {
             console.error("Error removing part:", error);
-            alert("Failed to remove part");
+            alert(getErrorMessage(error, "Failed to remove part"));
         }
     };
 
@@ -143,7 +144,7 @@ const IndentDetailPage = () => {
             fetchIndentDetails();
         } catch (error) {
             console.error("Error updating indent:", error);
-            alert("Failed to update indent");
+            alert(getErrorMessage(error, "Failed to update indent"));
         }
     };
 
@@ -155,7 +156,7 @@ const IndentDetailPage = () => {
             navigate('/indents');
         } catch (error) {
             console.error("Error deleting indent:", error);
-            alert("Failed to delete indent");
+            alert(getErrorMessage(error, "Failed to delete indent"));
         }
     };
 
@@ -176,8 +177,7 @@ const IndentDetailPage = () => {
             }, 500);
         } catch (error) {
             console.error("Error exporting PDF:", error);
-            const errorMessage = error.response?.data?.detail || "Failed to export PDF. Please try again.";
-            alert(errorMessage);
+            alert(getErrorMessage(error, "Failed to export PDF. Please try again."));
         } finally {
             setIsExportingPDF(false);
         }

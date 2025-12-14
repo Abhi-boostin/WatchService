@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, CheckSquare, Plus, ChevronRight, ChevronDown, Folder, FileText, Loader2, Pencil, Trash2 } from 'lucide-react';
 import api from '../services/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const NodeItem = ({ node, level = 0, onEdit, onDelete }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -110,7 +111,7 @@ const ServiceParametersPage = () => {
             setSelectedNode(null);
         } catch (error) {
             console.error("Error saving node:", error);
-            alert("Failed to save item");
+            alert(getErrorMessage(error, "Failed to save item"));
         }
     };
 
@@ -132,7 +133,7 @@ const ServiceParametersPage = () => {
             fetchNodes();
         } catch (error) {
             console.error("Error deleting node:", error);
-            alert("Failed to delete item");
+            alert(getErrorMessage(error, "Failed to delete item"));
         }
     };
 

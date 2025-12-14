@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Clock, Globe, Pencil, Trash2, X, AlertTriangle, Briefcase, ChevronRight, DollarSign } from 'lucide-react';
 import api from '../services/api';
 import CustomDatePicker from '../components/common/CustomDatePicker';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const CustomerDetailsPage = () => {
     const { id } = useParams();
@@ -114,7 +115,7 @@ const CustomerDetailsPage = () => {
             closeModal();
         } catch (error) {
             console.error("Error updating customer:", error);
-            alert("Failed to update customer");
+            alert(getErrorMessage(error, "Failed to update customer"));
         }
     };
 
@@ -124,7 +125,7 @@ const CustomerDetailsPage = () => {
             navigate('/customers');
         } catch (error) {
             console.error("Error deleting customer:", error);
-            alert("Failed to delete customer");
+            alert(getErrorMessage(error, "Failed to delete customer"));
         }
     };
 

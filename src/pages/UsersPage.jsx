@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, X, UserCog } from 'lucide-react';
 import api from '../services/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const UsersPage = () => {
     const [users, setUsers] = useState([]);
@@ -97,8 +98,7 @@ const UsersPage = () => {
             setShowModal(false);
         } catch (error) {
             console.error("Error saving user:", error);
-            const errorMessage = error.response?.data?.detail || "Failed to save user";
-            alert(errorMessage);
+            alert(getErrorMessage(error, "Failed to save user"));
         }
     };
 
@@ -110,8 +110,7 @@ const UsersPage = () => {
             setShowModal(false);
         } catch (error) {
             console.error("Error deleting user:", error);
-            const errorMessage = error.response?.data?.detail || "Failed to delete user";
-            alert(errorMessage);
+            alert(getErrorMessage(error, "Failed to delete user"));
         }
     };
 

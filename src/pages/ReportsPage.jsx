@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileBarChart, Calendar, Clock, Download, Loader2, Filter } from 'lucide-react';
 import api from '../services/api';
 import { getFinancialYearDates } from '../utils/dateUtils';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const ReportsPage = () => {
     const [loading, setLoading] = useState(false);
@@ -60,7 +61,7 @@ const ReportsPage = () => {
             handleDownload(response, `${reportType}_report.xlsx`);
         } catch (error) {
             console.error("Error generating report:", error);
-            alert("Failed to generate report. Please try again.");
+            alert(getErrorMessage(error, "Failed to generate report. Please try again."));
         } finally {
             setLoading(false);
         }
@@ -84,7 +85,7 @@ const ReportsPage = () => {
             handleDownload(response, `delay_report_${delayDays}days.xlsx`);
         } catch (error) {
             console.error("Error generating delay report:", error);
-            alert("Failed to generate delay report.");
+            alert(getErrorMessage(error, "Failed to generate delay report."));
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Truck, Phone, Mail, MapPin, Edit, Trash2 } from 'lucide-react';
 import api from '../services/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const SuppliersPage = () => {
     const [suppliers, setSuppliers] = useState([]);
@@ -58,7 +59,7 @@ const SuppliersPage = () => {
             fetchSuppliers();
         } catch (error) {
             console.error("Error saving supplier:", error);
-            alert("Failed to save supplier");
+            alert(getErrorMessage(error, "Failed to save supplier"));
         }
     };
 
@@ -81,7 +82,7 @@ const SuppliersPage = () => {
                 fetchSuppliers();
             } catch (error) {
                 console.error("Error deleting supplier:", error);
-                alert("Failed to delete supplier");
+                alert(getErrorMessage(error, "Failed to delete supplier"));
             }
         }
     };

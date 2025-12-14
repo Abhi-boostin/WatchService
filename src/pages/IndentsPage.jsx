@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, FileText, Package, Truck, Calendar, Eye, Filter, X } from 'lucide-react';
 import api from '../services/api';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const IndentsPage = () => {
     const navigate = useNavigate();
@@ -126,7 +127,7 @@ const IndentsPage = () => {
             });
         } catch (error) {
             console.error("Error loading create modal data:", error);
-            alert("Failed to load data for creating indent");
+            alert(getErrorMessage(error, "Failed to load data for creating indent"));
         }
     };
 
@@ -146,7 +147,7 @@ const IndentsPage = () => {
             navigate(`/indents/${response.data.id}`);
         } catch (error) {
             console.error("Error creating indent:", error);
-            alert(error.response?.data?.detail || "Failed to create indent");
+            alert(getErrorMessage(error, "Failed to create indent"));
         }
     };
 

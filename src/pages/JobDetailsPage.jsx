@@ -9,6 +9,7 @@ import {
 import api from '../services/api';
 import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelector';
 import { exportJobPDF } from '../services/pdfService';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const JobDetailsPage = () => {
     const { id } = useParams();
@@ -384,7 +385,7 @@ const JobDetailsPage = () => {
             closeModal();
         } catch (error) {
             console.error("Error updating details:", error);
-            alert("Failed to update details");
+            alert(getErrorMessage(error, "Failed to update details"));
         }
     };
 
@@ -394,7 +395,7 @@ const JobDetailsPage = () => {
             navigate('/jobs');
         } catch (error) {
             console.error("Error deleting job:", error);
-            alert("Failed to delete job");
+            alert(getErrorMessage(error, "Failed to delete job"));
         }
     };
 
@@ -406,7 +407,7 @@ const JobDetailsPage = () => {
             closeModal();
         } catch (error) {
             console.error("Error adding delay:", error);
-            alert("Failed to add delay");
+            alert(getErrorMessage(error, "Failed to add delay"));
         }
     };
 
@@ -437,7 +438,7 @@ const JobDetailsPage = () => {
             }
         } catch (error) {
             console.error("Error recalculating pricing:", error);
-            alert("Failed to recalculate pricing. Please try again.");
+            alert(getErrorMessage(error, "Failed to recalculate pricing. Please try again."));
         } finally {
             setIsRecalculating(false);
         }
@@ -460,8 +461,7 @@ const JobDetailsPage = () => {
             }, 500);
         } catch (error) {
             console.error("Error exporting PDF:", error);
-            const errorMessage = error.response?.data?.detail || "Failed to export PDF. Please try again.";
-            alert(errorMessage);
+            alert(getErrorMessage(error, "Failed to export PDF. Please try again."));
         } finally {
             setIsExportingPDF(false);
         }
@@ -534,7 +534,7 @@ const JobDetailsPage = () => {
                                         setJob(prev => ({ ...prev, status: newStatus }));
                                     } catch (err) {
                                         console.error("Failed to update status:", err);
-                                        alert("Failed to update status");
+                                        alert(getErrorMessage(err, "Failed to update status"));
                                     }
                                 }
                             }}
@@ -610,7 +610,7 @@ const JobDetailsPage = () => {
                                         setJob(prev => ({ ...prev, status: newStatus }));
                                     } catch (err) {
                                         console.error("Failed to update status:", err);
-                                        alert("Failed to update status");
+                                        alert(getErrorMessage(err, "Failed to update status"));
                                     }
                                 }
                             }}

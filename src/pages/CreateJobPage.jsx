@@ -9,6 +9,7 @@ import ImagesStep from '../components/jobs/create/ImagesStep';
 import StepIndicator from '../components/jobs/create/StepIndicator';
 import WatchSelectionModal from '../components/jobs/create/WatchSelectionModal';
 import CustomerAutofillPrompt from '../components/jobs/create/CustomerAutofillPrompt';
+import { getErrorMessage } from '../utils/errorUtils';
 
 const steps = [
     { id: 1, title: 'Customer', icon: User },
@@ -426,7 +427,7 @@ const CreateJobPage = () => {
 
         } catch (error) {
             console.error("Calculation failed:", error);
-            alert("Failed to calculate cost. Please try again.");
+            alert(getErrorMessage(error, "Failed to calculate cost. Please try again."));
         } finally {
             setIsLoading(false);
         }
@@ -494,7 +495,7 @@ const CreateJobPage = () => {
 
         } catch (error) {
             console.error("Error in Step 1:", error);
-            alert("Failed to save customer or create job. Please try again.");
+            alert(getErrorMessage(error, "Failed to save customer or create job. Please try again."));
         } finally {
             setIsLoading(false);
         }
@@ -536,7 +537,7 @@ const CreateJobPage = () => {
 
         } catch (error) {
             console.error("Error in Step 2:", error);
-            alert("Failed to save watch details. Please try again.");
+            alert(getErrorMessage(error, "Failed to save watch details. Please try again."));
         } finally {
             setIsLoading(false);
         }
@@ -595,7 +596,7 @@ const CreateJobPage = () => {
 
         } catch (error) {
             console.error("Error in Step 3:", error);
-            alert("Failed to save issues and conditions. Please try again.");
+            alert(getErrorMessage(error, "Failed to save issues and conditions. Please try again."));
         } finally {
             setIsLoading(false);
         }
@@ -627,7 +628,7 @@ const CreateJobPage = () => {
 
         } catch (error) {
             console.error("Error in Final Step:", error);
-            alert('Failed to upload images or finish job. Please try again.');
+            alert(getErrorMessage(error, 'Failed to upload images or finish job. Please try again.'));
         } finally {
             setIsLoading(false);
         }
