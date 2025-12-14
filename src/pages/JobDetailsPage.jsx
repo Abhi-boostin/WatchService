@@ -4,10 +4,11 @@ import {
     ArrowLeft, User, Watch, AlertTriangle, Image as ImageIcon,
     Calendar, DollarSign, Clock, CheckCircle, XCircle,
     MessageSquare, ClipboardCheck, Pencil, Trash2, X, ClipboardList,
-    Download, ZoomIn, Package, ChevronRight
+    Download, ZoomIn, Package, ChevronRight, FileText
 } from 'lucide-react';
 import api from '../services/api';
 import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelector';
+import { exportJobPDF } from '../services/pdfService';
 
 const JobDetailsPage = () => {
     const { id } = useParams();
@@ -37,6 +38,7 @@ const JobDetailsPage = () => {
     const [editTab, setEditTab] = useState('job'); // 'job', 'watch', 'customer', 'issues'
     const [formData, setFormData] = useState({});
     const [isRecalculating, setIsRecalculating] = useState(false);
+    const [isExportingPDF, setIsExportingPDF] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -441,6 +443,30 @@ const JobDetailsPage = () => {
         }
     };
 
+    const handleExportPDF = async () => {
+        if (!job) {
+            alert("Job information is not available.");
+            return;
+        }
+
+        try {
+            setIsExportingPDF(true);
+            const jobNumber = job.job_number || `#${job.id}`;
+            await exportJobPDF(job.id, jobNumber);
+            
+            // Success feedback
+            setTimeout(() => {
+                alert("PDF exported successfully! Check your downloads folder.");
+            }, 500);
+        } catch (error) {
+            console.error("Error exporting PDF:", error);
+            const errorMessage = error.response?.data?.detail || "Failed to export PDF. Please try again.";
+            alert(errorMessage);
+        } finally {
+            setIsExportingPDF(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center min-h-screen">
@@ -534,6 +560,15 @@ const JobDetailsPage = () => {
                         >
                             <Pencil size={16} />
                             <span>Edit</span>
+                        </button>
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={isExportingPDF}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-green-600 rounded-xl hover:bg-green-50 hover:border-green-200 transition-all shadow-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                            <FileText size={16} />
+                            <span className="hidden sm:inline">{isExportingPDF ? 'Exporting...' : 'Export PDF'}</span>
+                            <span className="sm:hidden">PDF</span>
                         </button>
                         <button
                             onClick={handleRecalculatePricing}

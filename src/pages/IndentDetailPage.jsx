@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar } from 'lucide-react';
 import api from '../services/api';
+import { exportIndentPDF } from '../services/pdfService';
 
 const IndentDetailPage = () => {
     const { id } = useParams();
@@ -28,6 +29,9 @@ const IndentDetailPage = () => {
     // Edit part modal
     const [editingPart, setEditingPart] = useState(null);
     const [editPartQuantity, setEditPartQuantity] = useState(1);
+
+    // PDF export state
+    const [isExportingPDF, setIsExportingPDF] = useState(false);
 
     useEffect(() => {
         fetchIndentDetails();
@@ -155,6 +159,30 @@ const IndentDetailPage = () => {
         }
     };
 
+    const handleExportPDF = async () => {
+        if (!indent) {
+            alert("Indent information is not available.");
+            return;
+        }
+
+        try {
+            setIsExportingPDF(true);
+            const serialNumber = indent.serial_number || `#${indent.id}`;
+            await exportIndentPDF(indent.id, serialNumber);
+            
+            // Success feedback
+            setTimeout(() => {
+                alert("PDF exported successfully! Check your downloads folder.");
+            }, 500);
+        } catch (error) {
+            console.error("Error exporting PDF:", error);
+            const errorMessage = error.response?.data?.detail || "Failed to export PDF. Please try again.";
+            alert(errorMessage);
+        } finally {
+            setIsExportingPDF(false);
+        }
+    };
+
 
     const filteredSpareParts = allSpareParts.filter(part => 
         part.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -207,6 +235,14 @@ const IndentDetailPage = () => {
                                 >
                                     <Pencil size={18} />
                                     Edit
+                                </button>
+                                <button
+                                    onClick={handleExportPDF}
+                                    disabled={isExportingPDF}
+                                    className="flex items-center gap-2 px-4 py-2 text-green-600 bg-white border border-green-200 rounded-xl hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <FileText size={18} />
+                                    {isExportingPDF ? 'Exporting...' : 'Export PDF'}
                                 </button>
                                 <button
                                     onClick={handleDeleteIndent}
