@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import api from '../../services/api';
+import api, { authService } from '../../services/api';
 import {
     LayoutDashboard,
     Package,
@@ -16,7 +16,8 @@ import {
     Tag,
     FileBarChart,
     UserCog,
-    DollarSign
+    DollarSign,
+    LogOut
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActive }) => {
@@ -153,7 +154,7 @@ const Sidebar = () => {
             </nav>
 
             {/* User Profile (Optional footer) */}
-            <div className="mt-auto pt-4 border-t border-gray-200">
+            <div className="mt-auto pt-4 border-t border-gray-200 space-y-2">
                 <NavLink
                     to="/profile"
                     className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white hover:shadow-sm transition-all cursor-pointer group"
@@ -172,6 +173,15 @@ const Sidebar = () => {
                         )}
                     </div>
                 </NavLink>
+                
+                {/* Logout Button */}
+                <button
+                    onClick={() => authService.logout()}
+                    className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all cursor-pointer group w-full text-gray-500"
+                >
+                    <LogOut size={20} strokeWidth={1.5} className="group-hover:scale-105 transition-transform" />
+                    <span className="text-sm font-medium">Logout</span>
+                </button>
             </div>
         </div>
     );
