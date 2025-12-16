@@ -1,10 +1,40 @@
-import React from 'react';
-import { ClipboardList } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { ClipboardList, Package, Clock } from 'lucide-react';
 import CustomDatePicker from '../../common/CustomDatePicker';
 import HierarchicalNodeSelector from '../../common/HierarchicalNodeSelector';
 
-const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, handleConditionToggle, handleComplaintToggle, onCalculateCost, costBreakdown, isCalculating }) => {
+const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, spareParts = [], handleConditionToggle, handleComplaintToggle, handleComplaintSparePartChange, onCalculateCost, costBreakdown, isCalculating }) => {
     const { issues } = formData;
+
+    // Helper function to find complaint node by ID
+    const findComplaintNode = (nodes, targetId) => {
+        for (const node of nodes) {
+            if (node.id === targetId) return node;
+            if (node.children) {
+                const found = findComplaintNode(node.children, targetId);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+
+    // Auto-populate default spare parts when complaints are selected
+    useEffect(() => {
+        if (!handleComplaintSparePartChange) return;
+
+        const selectedComplaints = issues.complaint_node_ids || [];
+        
+        selectedComplaints.forEach(complaintId => {
+            const complaintNode = findComplaintNode(complaintNodes, complaintId);
+            const existingMetadata = issues.complaint_spare_parts?.[complaintId];
+            
+            // Only auto-populate if no metadata exists yet AND complaint has default spare part
+            if (!existingMetadata && complaintNode?.default_spare_part_id) {
+                handleComplaintSparePartChange(complaintId, 'indent_required', true);
+                handleComplaintSparePartChange(complaintId, 'spare_part_id', complaintNode.default_spare_part_id);
+            }
+        });
+    }, [issues.complaint_node_ids, complaintNodes]);
 
     return (
         <div className="space-y-8 animate-fadeIn">
@@ -32,6 +62,114 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
                         label="Customer Complaints"
                         emptyMessage="No complaints available"
                     />
+
+                    {/* Spare Parts Metadata for Selected Complaints */}
+                    {issues.complaint_node_ids && issues.complaint_node_ids.length > 0 && handleComplaintSparePartChange && (
+                        <div className="mt-6 space-y-4">
+                            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <Package className="w-4 h-4 text-blue-600" />
+                                Spare Parts Requirements
+                            </h4>
+                            {issues.complaint_node_ids.map(complaintId => {
+                                const complaintNode = findComplaintNode(complaintNodes, complaintId);
+                                const metadata = issues.complaint_spare_parts?.[complaintId] || {};
+                                const selectedSparePart = spareParts.find(sp => sp.id === metadata.spare_part_id);
+                                
+                                if (!complaintNode) return null;
+
+                                return (
+                                    <div key={complaintId} className="bg-white rounded-lg border border-gray-200 p-4">
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex-1">
+                                                <h5 className="font-medium text-gray-900">
+                                                    {complaintNode.parent_label ? `${complaintNode.parent_label} - ` : ''}
+                                                    {complaintNode.label}
+                                                </h5>
+                                                {complaintNode.default_spare_part && (
+                                                    <p className="text-xs text-blue-600 mt-1">
+                                                        Default: {complaintNode.default_spare_part.part_name}
+                                                        {complaintNode.default_spare_part.estimated_delivery_days && 
+                                                            ` (${complaintNode.default_spare_part.estimated_delivery_days} days)`
+                                                        }
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="space-y-3">
+                                            {/* Checkbox: Indent Required */}
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={metadata.indent_required || false}
+                                                    onChange={(e) => handleComplaintSparePartChange(complaintId, 'indent_required', e.target.checked)}
+                                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-100"
+                                                />
+                                                <span className="text-sm font-medium text-gray-700">
+                                                    This complaint requires ordering spare parts
+                                                </span>
+                                            </label>
+
+                                            {/* Spare Part Dropdown (shown when indent_required is true) */}
+                                            {metadata.indent_required && (
+                                                <div className="pl-6 space-y-2">
+                                                    <label className="block text-sm font-medium text-gray-700">
+                                                        Select Spare Part
+                                                    </label>
+                                                    <select
+                                                        value={metadata.spare_part_id || ''}
+                                                        onChange={(e) => handleComplaintSparePartChange(complaintId, 'spare_part_id', e.target.value ? parseInt(e.target.value) : null)}
+                                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none bg-white text-sm"
+                                                    >
+                                                        <option value="">Select a spare part...</option>
+                                                        {spareParts.map(part => (
+                                                            <option key={part.id} value={part.id}>
+                                                                {part.part_name}
+                                                                {part.estimated_delivery_days ? ` - ${part.estimated_delivery_days} days` : ''}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+
+                                                    {/* Show delivery estimate for selected part */}
+                                                    {selectedSparePart && selectedSparePart.estimated_delivery_days && (
+                                                        <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
+                                                            <Clock size={14} />
+                                                            <span>Estimated delivery: {selectedSparePart.estimated_delivery_days} days</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {/* Overall delivery estimate */}
+                            {(() => {
+                                const maxDelivery = Math.max(
+                                    0,
+                                    ...issues.complaint_node_ids.map(cid => {
+                                        const metadata = issues.complaint_spare_parts?.[cid];
+                                        if (!metadata?.indent_required || !metadata?.spare_part_id) return 0;
+                                        const part = spareParts.find(sp => sp.id === metadata.spare_part_id);
+                                        return part?.estimated_delivery_days || 0;
+                                    })
+                                );
+
+                                if (maxDelivery > 0) {
+                                    return (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                                            <Clock size={16} className="text-amber-600" />
+                                            <span className="text-sm font-medium text-amber-900">
+                                                Maximum estimated delivery time: {maxDelivery} days
+                                            </span>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+                        </div>
+                    )}
 
                     {/* Other Issues */}
                     <div>
@@ -61,25 +199,38 @@ const IssuesStep = ({ formData, handleChange, conditionNodes, complaintNodes, ha
                         </div>
 
                         {costBreakdown && (
-                            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-100">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div>
-                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Total Estimate</span>
-                                        <span className="text-lg font-bold text-blue-700">₹{parseFloat(costBreakdown.estimated_total).toFixed(2)}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Labour Cost</span>
-                                        <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.total_labour_cost).toFixed(2)}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Parts Cost</span>
-                                        <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.total_parts_cost).toFixed(2)}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">UCP Rate</span>
-                                        <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.ucp_rate).toFixed(2)}</span>
+                            <div className="space-y-3">
+                                <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Total Estimate</span>
+                                            <span className="text-lg font-bold text-blue-700">₹{parseFloat(costBreakdown.estimated_total).toFixed(2)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Labour Cost</span>
+                                            <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.total_labour_cost).toFixed(2)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Parts Cost</span>
+                                            <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.total_parts_cost).toFixed(2)}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs text-gray-500 uppercase tracking-wide block mb-1">UCP Rate</span>
+                                            <span className="text-sm font-medium text-gray-900">₹{parseFloat(costBreakdown.ucp_rate).toFixed(2)}</span>
+                                        </div>
                                     </div>
                                 </div>
+                                
+                                {/* Delivery Estimate */}
+                                {costBreakdown.max_estimated_delivery_days && costBreakdown.max_estimated_delivery_days > 0 && (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-2">
+                                        <Clock size={16} className="text-amber-600" />
+                                        <span className="text-sm font-medium text-amber-900">
+                                            Estimated delivery time: {costBreakdown.max_estimated_delivery_days} days
+                                        </span>
+                                        <span className="text-xs text-amber-600">(based on spare parts)</span>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

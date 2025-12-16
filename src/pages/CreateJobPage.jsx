@@ -24,6 +24,7 @@ const CreateJobPage = () => {
     const [brands, setBrands] = useState([]);
     const [conditionNodes, setConditionNodes] = useState([]);
     const [complaintNodes, setComplaintNodes] = useState([]);
+    const [spareParts, setSpareParts] = useState([]);
 
     // New state for customer lookup and watch selection
 
@@ -78,6 +79,20 @@ const CreateJobPage = () => {
             }
         };
         fetchComplaintNodes();
+    }, []);
+
+    useEffect(() => {
+        const fetchSpareParts = async () => {
+            try {
+                const response = await api.get('/api/v1/spare-parts/all');
+                if (response.data) {
+                    setSpareParts(response.data);
+                }
+            } catch (error) {
+                console.warn("Failed to fetch spare parts:", error);
+            }
+        };
+        fetchSpareParts();
     }, []);
 
     useEffect(() => {
@@ -142,6 +157,7 @@ const CreateJobPage = () => {
             reported_issues: [],
             condition_node_ids: [],
             complaint_node_ids: [],
+            complaint_spare_parts: {}, // { complaint_node_id: { indent_required: bool, spare_part_id: number } }
             other_issue: '',
             spare_parts: [],
             estimated_cost: '',
@@ -349,18 +365,42 @@ const CreateJobPage = () => {
     const handleComplaintToggle = (nodeId) => {
         setFormData(prev => {
             const currentIds = prev.issues.complaint_node_ids || [];
-            const newIds = currentIds.includes(nodeId)
+            const isRemoving = currentIds.includes(nodeId);
+            const newIds = isRemoving
                 ? currentIds.filter(id => id !== nodeId)
                 : [...currentIds, nodeId];
+
+            // If removing complaint, also remove its spare parts metadata
+            const newComplaintSpareParts = { ...prev.issues.complaint_spare_parts };
+            if (isRemoving) {
+                delete newComplaintSpareParts[nodeId];
+            }
 
             return {
                 ...prev,
                 issues: {
                     ...prev.issues,
-                    complaint_node_ids: newIds
+                    complaint_node_ids: newIds,
+                    complaint_spare_parts: newComplaintSpareParts
                 }
             };
         });
+    };
+
+    const handleComplaintSparePartChange = (complaintNodeId, field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            issues: {
+                ...prev.issues,
+                complaint_spare_parts: {
+                    ...prev.issues.complaint_spare_parts,
+                    [complaintNodeId]: {
+                        ...(prev.issues.complaint_spare_parts[complaintNodeId] || {}),
+                        [field]: value
+                    }
+                }
+            }
+        }));
     };
 
     // State to track created resources
@@ -385,13 +425,31 @@ const CreateJobPage = () => {
                 console.warn("Failed to clear existing issues:", e);
             }
 
-            // 2. Attach Complaints
+            // 2. Attach Complaints (with spare parts metadata)
             if (formData.issues.complaint_node_ids.length > 0) {
-                await api.post('/api/v1/complaints/watch-complaints/batch', {
-                    watch_id: createdWatchId,
-                    complaint_node_ids: formData.issues.complaint_node_ids,
-                    notes: "Customer reported"
-                });
+                // Check if we have any spare parts metadata
+                const hasSparePartsMetadata = Object.keys(formData.issues.complaint_spare_parts).length > 0;
+                
+                if (hasSparePartsMetadata) {
+                    // Create complaints individually to include spare parts metadata
+                    for (const nodeId of formData.issues.complaint_node_ids) {
+                        const metadata = formData.issues.complaint_spare_parts[nodeId] || {};
+                        await api.post('/api/v1/complaints/watch-complaints', {
+                            watch_id: createdWatchId,
+                            complaint_node_id: nodeId,
+                            notes: "Customer reported",
+                            indent_required: metadata.indent_required || false,
+                            spare_part_id: metadata.spare_part_id || null
+                        });
+                    }
+                } else {
+                    // Use batch endpoint if no metadata
+                    await api.post('/api/v1/complaints/watch-complaints/batch', {
+                        watch_id: createdWatchId,
+                        complaint_node_ids: formData.issues.complaint_node_ids,
+                        notes: "Customer reported"
+                    });
+                }
             }
 
             // 3. Attach Conditions
@@ -552,13 +610,39 @@ const CreateJobPage = () => {
 
             setIsLoading(true);
 
-            // 4. Attach Complaints (Batch)
+            // Clear existing issues to prevent duplicates (in case user clicked Calculate first)
+            try {
+                await api.delete(`/api/v1/complaints/watch-complaints/watch/${createdWatchId}/all`);
+                await api.delete(`/api/v1/conditions/watch-conditions/watch/${createdWatchId}/all`);
+            } catch (e) {
+                console.warn("Failed to clear existing issues:", e);
+            }
+
+            // 4. Attach Complaints (with spare parts metadata)
             if (formData.issues.complaint_node_ids.length > 0) {
-                await api.post('/api/v1/complaints/watch-complaints/batch', {
-                    watch_id: createdWatchId,
-                    complaint_node_ids: formData.issues.complaint_node_ids,
-                    notes: "Customer reported"
-                });
+                // Check if we have any spare parts metadata
+                const hasSparePartsMetadata = Object.keys(formData.issues.complaint_spare_parts).length > 0;
+                
+                if (hasSparePartsMetadata) {
+                    // Create complaints individually to include spare parts metadata
+                    for (const nodeId of formData.issues.complaint_node_ids) {
+                        const metadata = formData.issues.complaint_spare_parts[nodeId] || {};
+                        await api.post('/api/v1/complaints/watch-complaints', {
+                            watch_id: createdWatchId,
+                            complaint_node_id: nodeId,
+                            notes: "Customer reported",
+                            indent_required: metadata.indent_required || false,
+                            spare_part_id: metadata.spare_part_id || null
+                        });
+                    }
+                } else {
+                    // Use batch endpoint if no metadata
+                    await api.post('/api/v1/complaints/watch-complaints/batch', {
+                        watch_id: createdWatchId,
+                        complaint_node_ids: formData.issues.complaint_node_ids,
+                        notes: "Customer reported"
+                    });
+                }
             }
 
             // 5. Attach Conditions (Batch)
@@ -667,8 +751,10 @@ const CreateJobPage = () => {
                         handleChange={handleIssueChange}
                         conditionNodes={conditionNodes}
                         complaintNodes={complaintNodes}
+                        spareParts={spareParts}
                         handleConditionToggle={handleConditionToggle}
                         handleComplaintToggle={handleComplaintToggle}
+                        handleComplaintSparePartChange={handleComplaintSparePartChange}
                         onCalculateCost={handleCalculateCost}
                         costBreakdown={costBreakdown}
                         isCalculating={isLoading}

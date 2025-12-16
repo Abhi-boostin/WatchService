@@ -66,11 +66,13 @@ const ServiceParametersPage = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [selectedNode, setSelectedNode] = useState(null);
+    const [spareParts, setSpareParts] = useState([]);
 
     // Form State
     const [formData, setFormData] = useState({
         label: '',
-        parent_id: '' // Empty string means root
+        parent_id: '', // Empty string means root
+        default_spare_part_id: '' // Only for complaints, leaf nodes
     });
 
     const fetchNodes = useCallback(async () => {
@@ -90,6 +92,21 @@ const ServiceParametersPage = () => {
         fetchNodes();
     }, [fetchNodes]);
 
+    // Fetch spare parts for complaints tab
+    useEffect(() => {
+        const fetchSpareParts = async () => {
+            if (activeTab === 'complaints') {
+                try {
+                    const response = await api.get('/api/v1/spare-parts/all');
+                    setSpareParts(response.data || []);
+                } catch (error) {
+                    console.error("Error fetching spare parts:", error);
+                }
+            }
+        };
+        fetchSpareParts();
+    }, [activeTab]);
+
     const handleSaveNode = async (e) => {
         e.preventDefault();
         try {
@@ -99,6 +116,11 @@ const ServiceParametersPage = () => {
                 parent_id: formData.parent_id ? parseInt(formData.parent_id) : null
             };
 
+            // Add default_spare_part_id for complaints (only if provided)
+            if (activeTab === 'complaints' && formData.default_spare_part_id) {
+                payload.default_spare_part_id = parseInt(formData.default_spare_part_id);
+            }
+
             if (selectedNode) {
                 await api.patch(`${endpoint}/${selectedNode.id}`, payload);
             } else {
@@ -107,7 +129,7 @@ const ServiceParametersPage = () => {
 
             fetchNodes();
             setShowModal(false);
-            setFormData({ label: '', parent_id: '' });
+            setFormData({ label: '', parent_id: '', default_spare_part_id: '' });
             setSelectedNode(null);
         } catch (error) {
             console.error("Error saving node:", error);
@@ -119,7 +141,8 @@ const ServiceParametersPage = () => {
         setSelectedNode(node);
         setFormData({
             label: node.label,
-            parent_id: node.parent_id || ''
+            parent_id: node.parent_id || '',
+            default_spare_part_id: node.default_spare_part_id || ''
         });
         setShowModal(true);
     };
@@ -139,7 +162,7 @@ const ServiceParametersPage = () => {
 
     const openCreateModal = () => {
         setSelectedNode(null);
-        setFormData({ label: '', parent_id: '' });
+        setFormData({ label: '', parent_id: '', default_spare_part_id: '' });
         setShowModal(true);
     };
 
@@ -157,6 +180,15 @@ const ServiceParametersPage = () => {
     };
 
     const potentialParents = getAllPotentialParents(nodes);
+
+    // Check if selected node would be a leaf node (no children)
+    const wouldBeLeafNode = () => {
+        if (selectedNode && selectedNode.children && selectedNode.children.length > 0) {
+            return false; // Editing existing node with children
+        }
+        // For new nodes or nodes without children, it's a leaf
+        return true;
+    };
 
     return (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -259,6 +291,38 @@ const ServiceParametersPage = () => {
                                     Select a parent to create a subheading, or leave empty for a main heading.
                                 </p>
                             </div>
+                            {/* Default Spare Part (Complaints Only, Leaf Nodes Only) */}
+                            {activeTab === 'complaints' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Default Spare Part (Optional)
+                                    </label>
+                                    <select
+                                        value={formData.default_spare_part_id}
+                                        onChange={e => setFormData({ ...formData, default_spare_part_id: e.target.value })}
+                                        disabled={!wouldBeLeafNode()}
+                                        className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                    >
+                                        <option value="">None</option>
+                                        {spareParts.map(part => (
+                                            <option key={part.id} value={part.id}>
+                                                {part.part_name}
+                                                {part.estimated_delivery_days ? ` - ${part.estimated_delivery_days} days` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {!wouldBeLeafNode() ? (
+                                        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                            <AlertTriangle size={12} />
+                                            Only leaf nodes (without children) can have default spare parts
+                                        </p>
+                                    ) : (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Auto-select this spare part when users log this complaint
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                             <div className="flex justify-end gap-3 mt-6">
                                 <button
                                     type="button"

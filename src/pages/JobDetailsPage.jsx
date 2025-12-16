@@ -28,6 +28,7 @@ const JobDetailsPage = () => {
     const [brands, setBrands] = useState([]);
     const [availableComplaints, setAvailableComplaints] = useState([]);
     const [availableConditions, setAvailableConditions] = useState([]);
+    const [spareParts, setSpareParts] = useState([]);
     
     // User state for permissions
     const [currentUser, setCurrentUser] = useState(null);
@@ -48,11 +49,21 @@ const JobDetailsPage = () => {
     const [selectedImage, setSelectedImage] = useState(null);
 
     // Modal States
-    const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay'
+    const [modalType, setModalType] = useState(null); // 'edit', 'delete', 'delay', 'create-indent'
     const [editTab, setEditTab] = useState('job'); // 'job', 'watch', 'customer', 'issues'
     const [formData, setFormData] = useState({});
     const [isRecalculating, setIsRecalculating] = useState(false);
     const [isExportingPDF, setIsExportingPDF] = useState(false);
+
+    // Indent creation state
+    const [indentSuggestions, setIndentSuggestions] = useState(null);
+    const [indentFormData, setIndentFormData] = useState({
+        supplier_id: '',
+        notes: '',
+        selected_parts: {}, // { spare_part_id: quantity }
+    });
+    const [suppliers, setSuppliers] = useState([]);
+    const [isCreatingIndent, setIsCreatingIndent] = useState(false);
 
     // Fetch current user for permissions
     useEffect(() => {
@@ -157,6 +168,22 @@ const JobDetailsPage = () => {
                     if (mounted) setAvailableConditions(condNodesRes.data);
                 } catch (err) {
                     console.warn("Error fetching condition nodes:", err);
+                }
+
+                // 9. Fetch Spare Parts
+                try {
+                    const sparePartsRes = await api.get('/api/v1/spare-parts/all');
+                    if (mounted) setSpareParts(sparePartsRes.data || []);
+                } catch (err) {
+                    console.warn("Error fetching spare parts:", err);
+                }
+
+                // 10. Fetch Suppliers (for indent creation)
+                try {
+                    const suppliersRes = await api.get('/api/v1/suppliers/all');
+                    if (mounted) setSuppliers(suppliersRes.data || []);
+                } catch (err) {
+                    console.warn("Error fetching suppliers:", err);
                 }
 
             } catch (error) {
@@ -276,7 +303,19 @@ const JobDetailsPage = () => {
 
             // Issues Fields (IDs only for selection)
             selected_complaint_ids: complaints.map(c => c.complaint_node_id),
-            selected_condition_ids: conditions.map(c => c.condition_node_id)
+            selected_condition_ids: conditions.map(c => c.condition_node_id),
+            
+            // Complaint spare parts metadata
+            complaint_spare_parts: complaints.reduce((acc, c) => {
+                if (c.indent_required || c.spare_part_id) {
+                    acc[c.complaint_node_id] = {
+                        complaint_watch_id: c.id, // Store the watch_complaint ID for updates
+                        indent_required: c.indent_required || false,
+                        spare_part_id: c.spare_part_id || null
+                    };
+                }
+                return acc;
+            }, {})
         });
         setEditTab('job');
         setModalType('edit');
@@ -353,6 +392,19 @@ const JobDetailsPage = () => {
         setFormData({ ...formData, selected_condition_ids: newIds });
     };
 
+    const handleComplaintSparePartChange = (complaintNodeId, field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            complaint_spare_parts: {
+                ...prev.complaint_spare_parts,
+                [complaintNodeId]: {
+                    ...(prev.complaint_spare_parts?.[complaintNodeId] || {}),
+                    [field]: value
+                }
+            }
+        }));
+    };
+
     const handleUpdateJob = async (e) => {
         e.preventDefault();
         try {
@@ -385,23 +437,39 @@ const JobDetailsPage = () => {
                 const watchRes = await api.patch(`/api/v1/watches/${watch.id}`, watchData);
                 setWatch(watchRes.data);
 
-                // 3. Update Issues (Complaints)
+                // 3. Update Issues (Complaints with spare parts metadata)
                 const currentComplaintIds = complaints.map(c => c.complaint_node_id);
                 const newComplaintIds = formData.selected_complaint_ids.map(Number);
 
                 const complaintsToAdd = newComplaintIds.filter(id => !currentComplaintIds.includes(id));
                 const complaintsToRemove = complaints.filter(c => !newComplaintIds.includes(c.complaint_node_id));
 
-                // Add new complaints
+                // Add new complaints (with metadata if available)
                 for (const nodeId of complaintsToAdd) {
+                    const metadata = formData.complaint_spare_parts?.[nodeId] || {};
                     await api.post('/api/v1/complaints/watch-complaints', {
                         watch_id: watch.id,
-                        complaint_node_id: nodeId
+                        complaint_node_id: nodeId,
+                        indent_required: metadata.indent_required || false,
+                        spare_part_id: metadata.spare_part_id || null
                     });
                 }
+                
                 // Remove deselected complaints
                 for (const item of complaintsToRemove) {
                     await api.delete(`/api/v1/complaints/watch-complaints/${item.id}`);
+                }
+
+                // Update existing complaints with spare parts metadata
+                for (const complaintNodeId of newComplaintIds) {
+                    const metadata = formData.complaint_spare_parts?.[complaintNodeId];
+                    if (metadata && metadata.complaint_watch_id) {
+                        // This is an existing complaint, update its metadata
+                        await api.patch(`/api/v1/complaints/watch-complaints/${metadata.complaint_watch_id}`, {
+                            indent_required: metadata.indent_required || false,
+                            spare_part_id: metadata.spare_part_id || null
+                        });
+                    }
                 }
 
                 // Refresh complaints
@@ -527,6 +595,96 @@ const JobDetailsPage = () => {
             alert(getErrorMessage(error, "Failed to export PDF. Please try again."));
         } finally {
             setIsExportingPDF(false);
+        }
+    };
+
+    const handleOpenIndentModal = async () => {
+        if (!watch) {
+            alert("Watch information not available.");
+            return;
+        }
+
+        try {
+            setIsCreatingIndent(true);
+            // Fetch indent suggestions
+            const response = await api.get(`/api/v1/complaints/watch-complaints/watch/${watch.id}/indent-suggestions`);
+            setIndentSuggestions(response.data);
+
+            if (response.data.total_parts_required === 0) {
+                alert("No spare parts are required for this watch's complaints.");
+                return;
+            }
+
+            // Initialize selected parts (all selected by default)
+            const initialSelectedParts = {};
+            response.data.suggestions.forEach(suggestion => {
+                initialSelectedParts[suggestion.spare_part.id] = 1; // Default quantity: 1
+            });
+
+            setIndentFormData({
+                supplier_id: '',
+                notes: '',
+                selected_parts: initialSelectedParts
+            });
+
+            setModalType('create-indent');
+        } catch (error) {
+            console.error("Error fetching indent suggestions:", error);
+            alert(getErrorMessage(error, "Failed to load indent suggestions. Please try again."));
+        } finally {
+            setIsCreatingIndent(false);
+        }
+    };
+
+    const handleCreateIndent = async (e) => {
+        e.preventDefault();
+        
+        if (!indentFormData.supplier_id) {
+            alert("Please select a supplier.");
+            return;
+        }
+
+        const selectedParts = Object.entries(indentFormData.selected_parts).filter(([_, qty]) => qty > 0);
+        if (selectedParts.length === 0) {
+            alert("Please select at least one spare part.");
+            return;
+        }
+
+        try {
+            setIsCreatingIndent(true);
+
+            // 1. Create indent
+            const indentResponse = await api.post('/api/v1/indents', {
+                job_id: job.id,
+                supplier_id: parseInt(indentFormData.supplier_id),
+                notes: indentFormData.notes || null
+            });
+
+            const indentId = indentResponse.data.id;
+
+            // 2. Add spare parts to indent
+            for (const [sparePartId, quantity] of selectedParts) {
+                await api.post(`/api/v1/indents/${indentId}/parts`, {
+                    spare_part_id: parseInt(sparePartId),
+                    quantity: parseInt(quantity)
+                });
+            }
+
+            // 3. Success!
+            alert(`Indent ${indentResponse.data.serial_number} created successfully!`);
+            
+            // Refresh indents list
+            const indentsResponse = await api.get(`/api/v1/jobs/${job.id}`);
+            if (indentsResponse.data.indents) {
+                setIndents(indentsResponse.data.indents);
+            }
+
+            closeModal();
+        } catch (error) {
+            console.error("Error creating indent:", error);
+            alert(getErrorMessage(error, "Failed to create indent. Please try again."));
+        } finally {
+            setIsCreatingIndent(false);
         }
     };
 
@@ -828,7 +986,7 @@ const JobDetailsPage = () => {
                                 )}
 
                                 {/* Delivery Information */}
-                                <div className="pt-3 mt-3 border-t border-gray-200">
+                                <div className="pt-3 mt-3 border-t border-gray-200 space-y-2">
                                     <div className="flex justify-between py-2">
                                         <span className="text-sm text-gray-600">Delivery Date</span>
                                         <span className="font-medium text-gray-900">
@@ -851,6 +1009,27 @@ const JobDetailsPage = () => {
                                             </span>
                                         </div>
                                     )}
+                                    
+                                    {/* Show spare parts delivery estimate if available */}
+                                    {(() => {
+                                        const maxDelivery = Math.max(
+                                            0,
+                                            ...complaints
+                                                .filter(c => c.indent_required && c.spare_part?.estimated_delivery_days)
+                                                .map(c => c.spare_part.estimated_delivery_days)
+                                        );
+                                        if (maxDelivery > 0) {
+                                            return (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 flex items-center gap-2">
+                                                    <Clock size={14} className="text-blue-600" />
+                                                    <span className="text-xs font-medium text-blue-900">
+                                                        Spare parts delivery: {maxDelivery} days
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -922,7 +1101,7 @@ const JobDetailsPage = () => {
                                         <div key={index} className="p-4 bg-red-50 rounded-xl border border-red-100 transition-all hover:shadow-sm">
                                             <div className="flex items-start gap-3">
                                                 <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
-                                                <div>
+                                                <div className="flex-1">
                                                     <p className="font-medium text-gray-900">
                                                         {item.complaint_node?.parent_label 
                                                             ? `${item.complaint_node.parent_label} - ${item.complaint_node.label}`
@@ -930,6 +1109,21 @@ const JobDetailsPage = () => {
                                                         }
                                                     </p>
                                                     {item.notes && <p className="text-sm text-gray-600 mt-1">{item.notes}</p>}
+                                                    
+                                                    {/* Indent Status Badge */}
+                                                    {item.indent_required && (
+                                                        <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                                                            <Package size={12} />
+                                                            <span>
+                                                                Part Required: {item.spare_part?.part_name || 'Not selected'}
+                                                            </span>
+                                                            {item.spare_part?.estimated_delivery_days && (
+                                                                <span className="text-orange-600">
+                                                                    ({item.spare_part.estimated_delivery_days} days)
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -1072,7 +1266,25 @@ const JobDetailsPage = () => {
                     ref={el => sectionRefs.current.indents = el}
                     className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 scroll-mt-24"
                 >
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Indents & Parts</h2>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold text-gray-900">Indents & Parts</h2>
+                        {(() => {
+                            const partsRequired = complaints.filter(c => c.indent_required).length;
+                            if (partsRequired > 0) {
+                                return (
+                                    <button
+                                        onClick={handleOpenIndentModal}
+                                        disabled={isCreatingIndent}
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        <Package size={16} />
+                                        {isCreatingIndent ? 'Loading...' : `Create Indent (${partsRequired} part${partsRequired > 1 ? 's' : ''})`}
+                                    </button>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </div>
                     {indents.length > 0 ? (
                         <div className="space-y-4">
                             {indents.map((indent) => (
@@ -1473,6 +1685,70 @@ const JobDetailsPage = () => {
                                                         label="Customer Complaints"
                                                         emptyMessage="No complaints available"
                                                     />
+
+                                                    {/* Spare Parts Metadata for Selected Complaints */}
+                                                    {formData.selected_complaint_ids && formData.selected_complaint_ids.length > 0 && (
+                                                        <div className="mt-4 space-y-3">
+                                                            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                                                <Package className="w-4 h-4 text-blue-600" />
+                                                                Spare Parts Requirements
+                                                            </h4>
+                                                            {formData.selected_complaint_ids.map(complaintId => {
+                                                                const findNode = (nodes, targetId) => {
+                                                                    for (const node of nodes) {
+                                                                        if (node.id === targetId) return node;
+                                                                        if (node.children) {
+                                                                            const found = findNode(node.children, targetId);
+                                                                            if (found) return found;
+                                                                        }
+                                                                    }
+                                                                    return null;
+                                                                };
+                                                                
+                                                                const complaintNode = findNode(availableComplaints, complaintId);
+                                                                const metadata = formData.complaint_spare_parts?.[complaintId] || {};
+                                                                
+                                                                if (!complaintNode) return null;
+
+                                                                return (
+                                                                    <div key={complaintId} className="bg-white rounded-lg border border-gray-200 p-3">
+                                                                        <h5 className="font-medium text-gray-900 text-sm mb-2">
+                                                                            {complaintNode.parent_label ? `${complaintNode.parent_label} - ` : ''}
+                                                                            {complaintNode.label}
+                                                                        </h5>
+                                                                        
+                                                                        <div className="space-y-2">
+                                                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={metadata.indent_required || false}
+                                                                                    onChange={(e) => handleComplaintSparePartChange(complaintId, 'indent_required', e.target.checked)}
+                                                                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                                                                                />
+                                                                                <span className="text-sm text-gray-700">Requires spare part</span>
+                                                                            </label>
+
+                                                                            {metadata.indent_required && (
+                                                                                <select
+                                                                                    value={metadata.spare_part_id || ''}
+                                                                                    onChange={(e) => handleComplaintSparePartChange(complaintId, 'spare_part_id', e.target.value ? parseInt(e.target.value) : null)}
+                                                                                    className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 bg-white"
+                                                                                >
+                                                                                    <option value="">Select spare part...</option>
+                                                                                    {spareParts.map(part => (
+                                                                                        <option key={part.id} value={part.id}>
+                                                                                            {part.part_name}
+                                                                                            {part.estimated_delivery_days ? ` - ${part.estimated_delivery_days} days` : ''}
+                                                                                        </option>
+                                                                                    ))}
+                                                                                </select>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -1511,6 +1787,134 @@ const JobDetailsPage = () => {
                                     <div className="flex justify-end gap-3 mt-6">
                                         <button type="button" onClick={closeModal} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
                                         <button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">Add Delay</button>
+                                    </div>
+                                </form>
+                            )}
+
+                            {modalType === 'create-indent' && indentSuggestions && (
+                                <form onSubmit={handleCreateIndent} className="space-y-4">
+                                    {/* Suggested Parts */}
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-gray-900 mb-3">Required Spare Parts</h4>
+                                        <div className="space-y-3 max-h-60 overflow-y-auto">
+                                            {indentSuggestions.suggestions.map(suggestion => (
+                                                <div key={suggestion.spare_part.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                                    <div className="flex items-start gap-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={(indentFormData.selected_parts[suggestion.spare_part.id] || 0) > 0}
+                                                            onChange={(e) => {
+                                                                setIndentFormData(prev => ({
+                                                                    ...prev,
+                                                                    selected_parts: {
+                                                                        ...prev.selected_parts,
+                                                                        [suggestion.spare_part.id]: e.target.checked ? 1 : 0
+                                                                    }
+                                                                }));
+                                                            }}
+                                                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <p className="font-medium text-gray-900">{suggestion.spare_part.part_name}</p>
+                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                Needed for: {suggestion.complaint_labels.join(', ')}
+                                                            </p>
+                                                            {suggestion.max_estimated_delivery_days && (
+                                                                <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                                                    <Clock size={12} />
+                                                                    Delivery: {suggestion.max_estimated_delivery_days} days
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        {(indentFormData.selected_parts[suggestion.spare_part.id] || 0) > 0 && (
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                value={indentFormData.selected_parts[suggestion.spare_part.id] || 1}
+                                                                onChange={(e) => {
+                                                                    setIndentFormData(prev => ({
+                                                                        ...prev,
+                                                                        selected_parts: {
+                                                                            ...prev.selected_parts,
+                                                                            [suggestion.spare_part.id]: parseInt(e.target.value) || 1
+                                                                        }
+                                                                    }));
+                                                                }}
+                                                                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
+                                                                placeholder="Qty"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Delivery Estimate */}
+                                    {indentSuggestions.max_estimated_delivery_days && (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center gap-2">
+                                            <Clock size={16} className="text-blue-600" />
+                                            <span className="text-sm font-medium text-blue-900">
+                                                Maximum estimated delivery: {indentSuggestions.max_estimated_delivery_days} days
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Supplier Selection */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
+                                        <select
+                                            required
+                                            value={indentFormData.supplier_id}
+                                            onChange={(e) => setIndentFormData(prev => ({ ...prev, supplier_id: e.target.value }))}
+                                            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-100 bg-white"
+                                        >
+                                            <option value="">Select a supplier...</option>
+                                            {suppliers.map(supplier => (
+                                                <option key={supplier.id} value={supplier.id}>
+                                                    {supplier.name}
+                                                    {supplier.contact_number && ` - ${supplier.contact_number}`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Notes */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes (Optional)</label>
+                                        <textarea
+                                            value={indentFormData.notes}
+                                            onChange={(e) => setIndentFormData(prev => ({ ...prev, notes: e.target.value }))}
+                                            className="w-full px-3 py-2 rounded-lg border border-gray-200"
+                                            rows="3"
+                                            placeholder="Additional notes for this indent..."
+                                        ></textarea>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+                                        <button 
+                                            type="button" 
+                                            onClick={closeModal} 
+                                            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                                            disabled={isCreatingIndent}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button 
+                                            type="submit" 
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            disabled={isCreatingIndent}
+                                        >
+                                            {isCreatingIndent ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    Creating...
+                                                </>
+                                            ) : (
+                                                'Create Indent Order'
+                                            )}
+                                        </button>
                                     </div>
                                 </form>
                             )}

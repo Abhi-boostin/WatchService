@@ -97,4 +97,130 @@ export const auditService = {
     },
 };
 
+export const sparePartsService = {
+    getAll: async () => {
+        const response = await api.get('/api/v1/spare-parts/all');
+        return response.data;
+    },
+    getList: async (page = 1, pageSize = 20, search = '') => {
+        const params = { page, page_size: pageSize };
+        if (search) params.search = search;
+        const response = await api.get('/api/v1/spare-parts', { params });
+        return response.data;
+    },
+    getById: async (id) => {
+        const response = await api.get(`/api/v1/spare-parts/${id}`);
+        return response.data;
+    },
+    create: async (data) => {
+        const response = await api.post('/api/v1/spare-parts', data);
+        return response.data;
+    },
+    update: async (id, data) => {
+        const response = await api.patch(`/api/v1/spare-parts/${id}`, data);
+        return response.data;
+    },
+    delete: async (id) => {
+        const response = await api.delete(`/api/v1/spare-parts/${id}`);
+        return response.data;
+    },
+};
+
+export const complaintNodesService = {
+    getTree: async () => {
+        const response = await api.get('/api/v1/complaints/nodes');
+        return response.data;
+    },
+    getById: async (id) => {
+        const response = await api.get(`/api/v1/complaints/nodes/${id}`);
+        return response.data;
+    },
+    create: async (data) => {
+        const response = await api.post('/api/v1/complaints/nodes', data);
+        return response.data;
+    },
+    update: async (id, data) => {
+        const response = await api.patch(`/api/v1/complaints/nodes/${id}`, data);
+        return response.data;
+    },
+    delete: async (id) => {
+        const response = await api.delete(`/api/v1/complaints/nodes/${id}`);
+        return response.data;
+    },
+};
+
+export const watchComplaintsService = {
+    getForWatch: async (watchId) => {
+        const response = await api.get(`/api/v1/complaints/watch-complaints/watch/${watchId}`);
+        return response.data;
+    },
+    getById: async (id) => {
+        const response = await api.get(`/api/v1/complaints/watch-complaints/${id}`);
+        return response.data;
+    },
+    create: async (data) => {
+        const response = await api.post('/api/v1/complaints/watch-complaints', data);
+        return response.data;
+    },
+    createBatch: async (watchId, complaintNodeIds, notes = '') => {
+        const response = await api.post('/api/v1/complaints/watch-complaints/batch', {
+            watch_id: watchId,
+            complaint_node_ids: complaintNodeIds,
+            notes: notes
+        });
+        return response.data;
+    },
+    update: async (id, data) => {
+        const response = await api.patch(`/api/v1/complaints/watch-complaints/${id}`, data);
+        return response.data;
+    },
+    delete: async (id) => {
+        const response = await api.delete(`/api/v1/complaints/watch-complaints/${id}`);
+        return response.data;
+    },
+    getIndentSuggestions: async (watchId) => {
+        const response = await api.get(`/api/v1/complaints/watch-complaints/watch/${watchId}/indent-suggestions`);
+        return response.data;
+    },
+};
+
+export const indentsService = {
+    getById: async (id) => {
+        const response = await api.get(`/api/v1/indents/${id}`);
+        return response.data;
+    },
+    create: async (data) => {
+        const response = await api.post('/api/v1/indents', data);
+        return response.data;
+    },
+    update: async (id, data) => {
+        const response = await api.patch(`/api/v1/indents/${id}`, data);
+        return response.data;
+    },
+    delete: async (id) => {
+        const response = await api.delete(`/api/v1/indents/${id}`);
+        return response.data;
+    },
+    addPart: async (indentId, sparePartId, quantity) => {
+        const response = await api.post(`/api/v1/indents/${indentId}/parts`, {
+            spare_part_id: sparePartId,
+            quantity: quantity
+        });
+        return response.data;
+    },
+    removePart: async (indentId, sparePartId) => {
+        const response = await api.delete(`/api/v1/indents/${indentId}/parts/${sparePartId}`);
+        return response.data;
+    },
+};
+
+export const jobsService = {
+    recalculatePricing: async (jobId, applyToJob = true) => {
+        const response = await api.post(`/api/v1/jobs/${jobId}/recalculate-pricing`, {
+            apply_to_job: applyToJob
+        });
+        return response.data;
+    },
+};
+
 export default api;

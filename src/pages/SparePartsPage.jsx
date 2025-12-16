@@ -19,7 +19,8 @@ const SparePartsPage = () => {
         part_name: '',
         part_number: '',
         description: '',
-        unit_price: ''
+        unit_price: '',
+        estimated_delivery_days: ''
     });
 
     const fetchParts = useCallback(async () => {
@@ -54,7 +55,8 @@ const SparePartsPage = () => {
             part_name: '',
             part_number: '',
             description: '',
-            unit_price: ''
+            unit_price: '',
+            estimated_delivery_days: ''
         });
         setShowModal(true);
     };
@@ -66,7 +68,8 @@ const SparePartsPage = () => {
             part_name: part.part_name,
             part_number: part.part_number,
             description: part.description || '',
-            unit_price: part.unit_price
+            unit_price: part.unit_price,
+            estimated_delivery_days: part.estimated_delivery_days || ''
         });
         setShowModal(true);
     };
@@ -80,6 +83,11 @@ const SparePartsPage = () => {
                 description: formData.description,
                 unit_price: parseFloat(formData.unit_price)
             };
+
+            // Add estimated_delivery_days if provided
+            if (formData.estimated_delivery_days) {
+                payload.estimated_delivery_days = parseInt(formData.estimated_delivery_days);
+            }
 
             if (modalMode === 'create') {
                 await api.post('/api/v1/spare-parts', payload);
@@ -144,17 +152,18 @@ const SparePartsPage = () => {
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Part Number</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Description</th>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit Price</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Delivery Days</th>
                             <th className="sticky right-0 bg-gray-50/50 px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {loading ? (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">Loading...</td>
+                                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">Loading...</td>
                             </tr>
                         ) : parts.length === 0 ? (
                             <tr>
-                                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">No spare parts found.</td>
+                                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">No spare parts found.</td>
                             </tr>
                         ) : (
                             parts.map((part) => (
@@ -175,6 +184,18 @@ const SparePartsPage = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         ₹{part.unit_price?.toFixed(2)}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell">
+                                        {part.estimated_delivery_days ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                {part.estimated_delivery_days} days
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400 text-xs">Not set</span>
+                                        )}
                                     </td>
                                     <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                                         <div className="flex items-center justify-end gap-2">
@@ -289,6 +310,19 @@ const SparePartsPage = () => {
                                     rows="3"
                                     placeholder="Optional description..."
                                 ></textarea>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Delivery (Days)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="365"
+                                    value={formData.estimated_delivery_days}
+                                    onChange={e => setFormData({ ...formData, estimated_delivery_days: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g., 15"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">Typical delivery time in days (optional, 1-365)</p>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button
