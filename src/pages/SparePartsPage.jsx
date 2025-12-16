@@ -17,9 +17,7 @@ const SparePartsPage = () => {
     const [selectedPart, setSelectedPart] = useState(null);
     const [formData, setFormData] = useState({
         part_name: '',
-        part_number: '',
         description: '',
-        unit_price: '',
         estimated_delivery_days: ''
     });
 
@@ -53,9 +51,7 @@ const SparePartsPage = () => {
         setModalMode('create');
         setFormData({
             part_name: '',
-            part_number: '',
             description: '',
-            unit_price: '',
             estimated_delivery_days: ''
         });
         setShowModal(true);
@@ -66,9 +62,7 @@ const SparePartsPage = () => {
         setSelectedPart(part);
         setFormData({
             part_name: part.part_name,
-            part_number: part.part_number,
             description: part.description || '',
-            unit_price: part.unit_price,
             estimated_delivery_days: part.estimated_delivery_days || ''
         });
         setShowModal(true);
@@ -79,9 +73,7 @@ const SparePartsPage = () => {
         try {
             const payload = {
                 part_name: formData.part_name,
-                part_number: formData.part_number,
-                description: formData.description,
-                unit_price: parseFloat(formData.unit_price)
+                description: formData.description || null
             };
 
             // Add estimated_delivery_days if provided
@@ -119,7 +111,7 @@ const SparePartsPage = () => {
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Spare Parts</h1>
-                    <p className="text-gray-500 mt-1">Manage spare parts inventory</p>
+                    <p className="text-gray-500 mt-1">Manage spare parts catalog</p>
                 </div>
                 <button
                     onClick={handleOpenCreate}
@@ -149,21 +141,19 @@ const SparePartsPage = () => {
                     <thead className="bg-gray-50/50 border-b border-gray-100">
                         <tr>
                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Part Name</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Part Number</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Description</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit Price</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Delivery Days</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Description</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Delivery Days</th>
                             <th className="sticky right-0 bg-gray-50/50 px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {loading ? (
                             <tr>
-                                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">Loading...</td>
+                                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">Loading...</td>
                             </tr>
                         ) : parts.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">No spare parts found.</td>
+                                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">No spare parts found.</td>
                             </tr>
                         ) : (
                             parts.map((part) => (
@@ -176,16 +166,10 @@ const SparePartsPage = () => {
                                             <span className="font-medium text-gray-900">{part.part_name}</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                        {part.part_number}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate hidden xl:table-cell">
+                                    <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate hidden lg:table-cell">
                                         {part.description || '-'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        ₹{part.unit_price?.toFixed(2)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 hidden lg:table-cell">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                         {part.estimated_delivery_days ? (
                                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
                                                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,41 +249,18 @@ const SparePartsPage = () => {
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Part Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Part Name <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                     type="text"
                                     required
+                                    maxLength={255}
                                     value={formData.part_name}
                                     onChange={e => setFormData({ ...formData, part_name: e.target.value })}
                                     className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g. Main Spring"
+                                    placeholder="e.g. Main Spring, Balance Wheel, Crown Assembly"
                                 />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Part Number</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formData.part_number}
-                                    onChange={e => setFormData({ ...formData, part_number: e.target.value })}
-                                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g. MS-2025-001"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₹</span>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        required
-                                        value={formData.unit_price}
-                                        onChange={e => setFormData({ ...formData, unit_price: e.target.value })}
-                                        className="w-full pl-8 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="0.00"
-                                    />
-                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -308,7 +269,7 @@ const SparePartsPage = () => {
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                     className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     rows="3"
-                                    placeholder="Optional description..."
+                                    placeholder="Optional description of the spare part..."
                                 ></textarea>
                             </div>
                             <div>
@@ -322,7 +283,7 @@ const SparePartsPage = () => {
                                     className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="e.g., 15"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Typical delivery time in days (optional, 1-365)</p>
+                                <p className="text-xs text-gray-500 mt-1">Expected delivery time in days (optional, 1-365)</p>
                             </div>
                             <div className="flex justify-end gap-3 mt-6">
                                 <button
