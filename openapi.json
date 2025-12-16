@@ -818,7 +818,7 @@
           "customers"
         ],
         "summary": "Get Customer",
-        "description": "Get a specific customer by ID.",
+        "description": "Get a specific customer by ID with full details.\n\nReturns customer data including:\n- Customer information\n- All related jobs (ordered by creation date, newest first)",
         "operationId": "get_customer_api_v1_customers__customer_id__get",
         "security": [
           {
@@ -842,7 +842,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CustomerRead"
+                  "$ref": "#/components/schemas/CustomerDetail"
                 }
               }
             }
@@ -1223,7 +1223,7 @@
           "suppliers"
         ],
         "summary": "Delete Supplier",
-        "description": "Soft delete a supplier.\n\nRequires manager or admin privileges.",
+        "description": "Soft delete a supplier.\n\nRequires manager or admin privileges.\n\nValidation: Cannot delete a supplier if they have associated indents.\nThis ensures referential integrity and prevents orphaned indent records.",
         "operationId": "delete_supplier_api_v1_suppliers__supplier_id__delete",
         "security": [
           {
@@ -1726,13 +1726,40 @@
         }
       }
     },
+    "/api/v1/jobs/dashboard/statistics": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Get Dashboard Statistics",
+        "description": "Get dashboard statistics for jobs overview.\n\nReturns key metrics:\n- Total Active Jobs: Jobs not delivered or cancelled\n- In Progress: Jobs in booked, indented, or parts_received status\n- Ready for Delivery: Jobs in completed status\n- Completed Today: Jobs completed today\n\nThis endpoint is optimized for dashboard display and returns counts only.",
+        "operationId": "get_dashboard_statistics_api_v1_jobs_dashboard_statistics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStatistics"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/jobs/{job_id}": {
       "get": {
         "tags": [
           "jobs"
         ],
         "summary": "Get Job",
-        "description": "Get a specific job by ID.",
+        "description": "Get a specific job by ID with full details.\n\nReturns job data including:\n- Customer information\n- Watch details with brand information\n- All related indents with their spare parts and supplier information",
         "operationId": "get_job_api_v1_jobs__job_id__get",
         "security": [
           {
@@ -1756,7 +1783,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JobRead"
+                  "$ref": "#/components/schemas/JobDetail"
                 }
               }
             }
@@ -1834,7 +1861,7 @@
           "jobs"
         ],
         "summary": "Delete Job",
-        "description": "Soft delete a job.\n\nRequires manager or admin privileges.",
+        "description": "Soft delete a job and cascade to all related entities.\n\nThis will cascade soft delete to:\n- Watch (if exists) and all its complaints, conditions, and attachments\n- All indents and their indent parts\n\nRequires manager or admin privileges.",
         "operationId": "delete_job_api_v1_jobs__job_id__delete",
         "security": [
           {
@@ -2027,6 +2054,63 @@
                 "schema": {
                   "$ref": "#/components/schemas/RecalculatePricingResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/pdf": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Generate Job Pdf",
+        "description": "Generate PDF for a job.\n\nReturns a PDF document with:\n- Customer information\n- Watch details\n- Complaints and conditions (hierarchical, compact)\n- Cost estimate (optionally with breakdown)\n- Notes and signature fields\n\nRequires authentication.",
+        "operationId": "generate_job_pdf_api_v1_jobs__job_id__pdf_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "show_breakdown",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Show pricing breakdown (parts vs labour). Defaults to system setting.",
+              "title": "Show Breakdown"
+            },
+            "description": "Show pricing breakdown (parts vs labour). Defaults to system setting."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF document of the job order",
+            "content": {
+              "application/pdf": {
+
               }
             }
           },
@@ -2719,6 +2803,52 @@
         }
       }
     },
+    "/api/v1/indents/{indent_id}/pdf": {
+      "get": {
+        "tags": [
+          "indents"
+        ],
+        "summary": "Generate Indent Pdf",
+        "description": "Generate PDF for an indent (purchase order for supplier).\n\nReturns a PDF document with:\n- Supplier information\n- Related job details (customer, watch)\n- Spare parts list with quantities\n- Notes and signature fields\n\nRequires authentication.",
+        "operationId": "generate_indent_pdf_api_v1_indents__indent_id__pdf_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "indent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Indent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF document of the indent/purchase order",
+            "content": {
+              "application/pdf": {
+
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/spare-parts": {
       "post": {
         "tags": [
@@ -3251,7 +3381,7 @@
           "complaints"
         ],
         "summary": "Create Complaint Node",
-        "description": "Create a new complaint node (admin only).\n\nComplaint nodes can be organized hierarchically using parent_id.",
+        "description": "Create a new complaint node (admin only).\n\nComplaint nodes can be organized hierarchically using parent_id.\nBusiness rule: Only leaf nodes (without children) can have default_spare_part_id.",
         "operationId": "create_complaint_node_api_v1_complaints_nodes_post",
         "security": [
           {
@@ -3899,6 +4029,54 @@
               "application/json": {
                 "schema": {
 
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/complaints/watch-complaints/watch/{watch_id}/indent-suggestions": {
+      "get": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Get Indent Suggestions For Watch",
+        "description": "Get suggested spare parts for creating an indent based on watch complaints.\n\nThis endpoint analyzes all complaints with indent_required=True for the watch\nand returns aggregated spare parts with delivery estimates.\n\nUseful for pre-populating indent creation forms.\n\nArgs:\n    watch_id: ID of the watch to get indent suggestions for\n\nReturns:\n    IndentSuggestionResponse with spare parts, delivery estimates, and related metadata",
+        "operationId": "get_indent_suggestions_for_watch_api_v1_complaints_watch_complaints_watch__watch_id__indent_suggestions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "watch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Watch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndentSuggestionResponse"
                 }
               }
             }
@@ -4593,7 +4771,7 @@
           "attachments"
         ],
         "summary": "Upload watch attachment",
-        "description": "Upload an attachment file for a watch. Attachments can include photos of the watch or related documents.\n    \n    **Constraints:**\n    - Maximum file size: 10 MB (10,485,760 bytes)\n    - Allowed file types: JPEG, PNG, WebP, GIF, PDF\n    - File must be sent as multipart/form-data\n    \n    **Request Example (curl):**\n    ```bash\n    curl -X POST \"http://localhost:8000/api/v1/watches/123/attachments\" \\\n      -H \"Authorization: Bearer YOUR_TOKEN\" \\\n      -F \"file=@/path/to/image.jpg\"\n    ```\n    \n    **Response:** Returns attachment metadata including unique ID, filename, MIME type, file size, and upload timestamp.",
+        "description": "Upload file for a watch. Max 10MB. Allowed: JPEG, PNG, WebP, GIF, PDF",
         "operationId": "upload_watch_attachment_api_v1_watches__watch_id__attachments_post",
         "security": [
           {
@@ -4623,7 +4801,7 @@
         },
         "responses": {
           "201": {
-            "description": "File uploaded successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -4633,23 +4811,9 @@
             }
           },
           "400": {
-            "description": "Bad request - Invalid file type or corrupted file",
+            "description": "Invalid file type or corrupted",
             "content": {
               "application/json": {
-                "examples": {
-                  "invalid_file_type": {
-                    "summary": "Invalid file type",
-                    "value": {
-                      "detail": "Unsupported file type. Allowed types: image/jpeg, image/png, image/webp, image/gif, application/pdf"
-                    }
-                  },
-                  "corrupted_file": {
-                    "summary": "Corrupted file",
-                    "value": {
-                      "detail": "File appears to be corrupted or invalid"
-                    }
-                  }
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -4660,9 +4824,6 @@
             "description": "Watch not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Watch with ID 123 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -4670,25 +4831,9 @@
             }
           },
           "413": {
-            "description": "File too large - exceeds 10MB limit",
+            "description": "File exceeds 10MB limit",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "File size exceeds maximum allowed size of 10MB"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported media type",
-            "content": {
-              "application/json": {
-                "example": {
-                  "detail": "Unsupported file type. Allowed types: image/jpeg, image/png, image/webp, image/gif, application/pdf"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -4696,24 +4841,11 @@
             }
           },
           "422": {
-            "description": "Validation error - missing or invalid parameters",
+            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ValidationError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error - file storage failed",
-            "content": {
-              "application/json": {
-                "example": {
-                  "detail": "Failed to save file to storage"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
                 }
               }
             }
@@ -4725,7 +4857,7 @@
           "attachments"
         ],
         "summary": "List watch attachments",
-        "description": "Retrieve a paginated list of all attachments associated with a specific watch.\n    \n    **Query Parameters:**\n    - `skip`: Number of records to skip (for pagination, default: 0)\n    - `limit`: Maximum number of records to return (default: 20, max: 100)\n    \n    **Response:** Returns an array of attachment summaries without storage paths.",
+        "description": "List all attachments for a watch (paginated).",
         "operationId": "list_watch_attachments_api_v1_watches__watch_id__attachments_get",
         "security": [
           {
@@ -4765,7 +4897,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of attachments retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -4773,7 +4905,7 @@
                   "items": {
                     "$ref": "#/components/schemas/WatchAttachmentList"
                   },
-                  "title": "Response 200 List Watch Attachments Api V1 Watches  Watch Id  Attachments Get"
+                  "title": "Response List Watch Attachments Api V1 Watches  Watch Id  Attachments Get"
                 }
               }
             }
@@ -4782,9 +4914,6 @@
             "description": "Watch not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Watch with ID 123 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -4810,7 +4939,7 @@
           "attachments"
         ],
         "summary": "Download watch attachment",
-        "description": "Download the actual file content of a watch attachment.\n    \n    **Response:** Binary file content with appropriate Content-Type and Content-Disposition headers.\n    The filename in the Content-Disposition header matches the original uploaded filename.\n    \n    **Example (curl):**\n    ```bash\n    curl -X GET \"http://localhost:8000/api/v1/attachments/watch/42\" \\\n      -H \"Authorization: Bearer YOUR_TOKEN\" \\\n      -o downloaded-file.jpg\n    ```",
+        "description": "Download watch attachment file (binary response).",
         "operationId": "download_watch_attachment_api_v1_attachments_watch__attachment_id__get",
         "security": [
           {
@@ -4830,100 +4959,20 @@
         ],
         "responses": {
           "200": {
-            "description": "File download successful",
+            "description": "Binary file content",
             "content": {
-              "image/jpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/png": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/webp": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/gif": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "application/pdf": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
               "application/octet-stream": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
               }
-            },
-            "headers": {
-              "Content-Disposition": {
-                "description": "Attachment filename for download",
-                "schema": {
-                  "type": "string",
-                  "example": "attachment; filename=\"rolex-submariner-front.jpg\""
-                }
-              },
-              "Content-Type": {
-                "description": "MIME type of the file",
-                "schema": {
-                  "type": "string",
-                  "example": "image/jpeg"
-                }
-              },
-              "Content-Length": {
-                "description": "Size of the file in bytes",
-                "schema": {
-                  "type": "integer",
-                  "example": 2458624
-                }
-              }
             }
           },
           "404": {
-            "description": "Attachment not found or file missing from storage",
+            "description": "Attachment not found",
             "content": {
               "application/json": {
-                "examples": {
-                  "attachment_not_found": {
-                    "summary": "Attachment record not found",
-                    "value": {
-                      "detail": "Watch attachment with ID 42 not found"
-                    }
-                  },
-                  "file_not_found": {
-                    "summary": "File missing from storage",
-                    "value": {
-                      "detail": "Attachment file not found in storage"
-                    }
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error - file read failed",
-            "content": {
-              "application/json": {
-                "example": {
-                  "detail": "Failed to read file from storage"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -4946,8 +4995,8 @@
         "tags": [
           "attachments"
         ],
-        "summary": "Delete watch attachment",
-        "description": "Soft delete a watch attachment. The attachment is marked as deleted but not physically removed from storage.\n    \n    **Authorization:** Requires manager or admin role.\n    \n    **Note:** This is a soft delete operation. The file remains in storage but is no longer accessible via the API.",
+        "summary": "Delete watch attachment (soft delete)",
+        "description": "Soft delete watch attachment (manager only).",
         "operationId": "delete_watch_attachment_api_v1_attachments_watch__attachment_id__delete",
         "security": [
           {
@@ -5014,7 +5063,7 @@
           "attachments"
         ],
         "summary": "Get watch attachment metadata",
-        "description": "Retrieve metadata about a watch attachment without downloading the actual file.\n    \n    **Use Case:** Check file details (name, size, type, upload date) before downloading,\n    or display attachment information in a list or preview.\n    \n    **Response:** Returns complete attachment metadata including storage path (for administrative use).",
+        "description": "Get attachment metadata without downloading file.",
         "operationId": "get_watch_attachment_info_api_v1_attachments_watch__attachment_id__info_get",
         "security": [
           {
@@ -5034,7 +5083,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Attachment metadata retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -5047,9 +5096,6 @@
             "description": "Attachment not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Watch attachment with ID 42 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5075,7 +5121,7 @@
           "attachments"
         ],
         "summary": "Upload complaint attachment",
-        "description": "Upload an attachment file for a watch complaint. Use this to document issues, damages, or defects.\n    \n    **Constraints:**\n    - Maximum file size: 10 MB (10,485,760 bytes)\n    - Allowed file types: JPEG, PNG, WebP, GIF, PDF\n    - File must be sent as multipart/form-data\n    \n    **Request Example (curl):**\n    ```bash\n    curl -X POST \"http://localhost:8000/api/v1/watches/complaints/789/attachments\" \\\n      -H \"Authorization: Bearer YOUR_TOKEN\" \\\n      -F \"file=@/path/to/damage-photo.jpg\"\n    ```",
+        "description": "Upload file for complaint. Max 10MB. Allowed: JPEG, PNG, WebP, GIF, PDF",
         "operationId": "upload_complaint_attachment_api_v1_watches_complaints__complaint_id__attachments_post",
         "security": [
           {
@@ -5105,7 +5151,7 @@
         },
         "responses": {
           "201": {
-            "description": "File uploaded successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -5115,17 +5161,9 @@
             }
           },
           "400": {
-            "description": "Bad request - Invalid file type or corrupted file",
+            "description": "Invalid file type",
             "content": {
               "application/json": {
-                "examples": {
-                  "invalid_file_type": {
-                    "summary": "Invalid file type",
-                    "value": {
-                      "detail": "Unsupported file type. Allowed types: image/jpeg, image/png, image/webp, image/gif, application/pdf"
-                    }
-                  }
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5136,9 +5174,6 @@
             "description": "Complaint not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Watch complaint with ID 789 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5146,20 +5181,7 @@
             }
           },
           "413": {
-            "description": "File too large - exceeds 10MB limit",
-            "content": {
-              "application/json": {
-                "example": {
-                  "detail": "File size exceeds maximum allowed size of 10MB"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported media type",
+            "description": "File exceeds 10MB",
             "content": {
               "application/json": {
                 "schema": {
@@ -5169,24 +5191,14 @@
             }
           },
           "422": {
-            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ValidationError"
                 }
               }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       },
@@ -5195,7 +5207,7 @@
           "attachments"
         ],
         "summary": "List complaint attachments",
-        "description": "Retrieve a paginated list of all attachments associated with a specific watch complaint.\n    \n    **Query Parameters:**\n    - `skip`: Number of records to skip (for pagination, default: 0)\n    - `limit`: Maximum number of records to return (default: 20, max: 100)",
+        "description": "List all attachments for a complaint.",
         "operationId": "list_complaint_attachments_api_v1_watches_complaints__complaint_id__attachments_get",
         "security": [
           {
@@ -5235,7 +5247,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of complaint attachments retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -5243,7 +5255,7 @@
                   "items": {
                     "$ref": "#/components/schemas/WatchComplaintAttachmentList"
                   },
-                  "title": "Response 200 List Complaint Attachments Api V1 Watches Complaints  Complaint Id  Attachments Get"
+                  "title": "Response List Complaint Attachments Api V1 Watches Complaints  Complaint Id  Attachments Get"
                 }
               }
             }
@@ -5252,9 +5264,6 @@
             "description": "Complaint not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Watch complaint with ID 789 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5280,7 +5289,7 @@
           "attachments"
         ],
         "summary": "Download complaint attachment",
-        "description": "Download the actual file content of a complaint attachment.\n    \n    **Response:** Binary file content with appropriate Content-Type and Content-Disposition headers.",
+        "description": "Download complaint attachment file.",
         "operationId": "download_complaint_attachment_api_v1_attachments_complaint__attachment_id__get",
         "security": [
           {
@@ -5300,75 +5309,18 @@
         ],
         "responses": {
           "200": {
-            "description": "File download successful",
+            "description": "Binary file content",
             "content": {
-              "image/jpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/png": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/webp": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/gif": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "application/pdf": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
               "application/octet-stream": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
               }
-            },
-            "headers": {
-              "Content-Disposition": {
-                "description": "Attachment filename for download",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Content-Type": {
-                "description": "MIME type of the file",
-                "schema": {
-                  "type": "string"
-                }
-              }
             }
           },
           "404": {
             "description": "Attachment not found",
-            "content": {
-              "application/json": {
-                "example": {
-                  "detail": "Complaint attachment with ID 42 not found"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
             "content": {
               "application/json": {
                 "schema": {
@@ -5393,8 +5345,8 @@
         "tags": [
           "attachments"
         ],
-        "summary": "Delete complaint attachment",
-        "description": "Soft delete a complaint attachment. The attachment is marked as deleted but not physically removed.\n    \n    **Authorization:** Requires manager or admin role.",
+        "summary": "Delete complaint attachment (soft delete)",
+        "description": "Soft delete complaint attachment (manager only).",
         "operationId": "delete_complaint_attachment_api_v1_attachments_complaint__attachment_id__delete",
         "security": [
           {
@@ -5414,10 +5366,10 @@
         ],
         "responses": {
           "204": {
-            "description": "Attachment deleted successfully (soft delete)"
+            "description": "Successful Response"
           },
           "403": {
-            "description": "Forbidden - requires manager or admin role",
+            "description": "Requires manager role",
             "content": {
               "application/json": {
                 "schema": {
@@ -5430,9 +5382,6 @@
             "description": "Attachment not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Complaint attachment with ID 42 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5458,7 +5407,7 @@
           "attachments"
         ],
         "summary": "Get complaint attachment metadata",
-        "description": "Retrieve metadata about a complaint attachment without downloading the actual file.\n    \n    **Use Case:** Check file details before downloading or display attachment information in a list.",
+        "description": "Get complaint attachment metadata.",
         "operationId": "get_complaint_attachment_info_api_v1_attachments_complaint__attachment_id__info_get",
         "security": [
           {
@@ -5478,7 +5427,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Attachment metadata retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -5491,9 +5440,6 @@
             "description": "Attachment not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Complaint attachment with ID 42 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5519,7 +5465,7 @@
           "attachments"
         ],
         "summary": "Upload condition attachment",
-        "description": "Upload an attachment file for a watch condition. Use this to document the physical state of a watch.\n    \n    **Constraints:**\n    - Maximum file size: 10 MB (10,485,760 bytes)\n    - Allowed file types: JPEG, PNG, WebP, GIF, PDF\n    - File must be sent as multipart/form-data\n    \n    **Request Example (curl):**\n    ```bash\n    curl -X POST \"http://localhost:8000/api/v1/watches/conditions/234/attachments\" \\\n      -H \"Authorization: Bearer YOUR_TOKEN\" \\\n      -F \"file=@/path/to/condition-photo.jpg\"\n    ```",
+        "description": "Upload file for condition. Max 10MB. Allowed: JPEG, PNG, WebP, GIF, PDF",
         "operationId": "upload_condition_attachment_api_v1_watches_conditions__condition_id__attachments_post",
         "security": [
           {
@@ -5549,7 +5495,7 @@
         },
         "responses": {
           "201": {
-            "description": "File uploaded successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -5559,17 +5505,9 @@
             }
           },
           "400": {
-            "description": "Bad request - Invalid file type or corrupted file",
+            "description": "Invalid file type",
             "content": {
               "application/json": {
-                "examples": {
-                  "invalid_file_type": {
-                    "summary": "Invalid file type",
-                    "value": {
-                      "detail": "Unsupported file type. Allowed types: image/jpeg, image/png, image/webp, image/gif, application/pdf"
-                    }
-                  }
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5580,9 +5518,6 @@
             "description": "Condition not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Watch condition with ID 234 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5590,20 +5525,7 @@
             }
           },
           "413": {
-            "description": "File too large - exceeds 10MB limit",
-            "content": {
-              "application/json": {
-                "example": {
-                  "detail": "File size exceeds maximum allowed size of 10MB"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
-          },
-          "415": {
-            "description": "Unsupported media type",
+            "description": "File exceeds 10MB",
             "content": {
               "application/json": {
                 "schema": {
@@ -5613,24 +5535,14 @@
             }
           },
           "422": {
-            "description": "Validation error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ValidationError"
                 }
               }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       },
@@ -5639,7 +5551,7 @@
           "attachments"
         ],
         "summary": "List condition attachments",
-        "description": "Retrieve a paginated list of all attachments associated with a specific watch condition.\n    \n    **Query Parameters:**\n    - `skip`: Number of records to skip (for pagination, default: 0)\n    - `limit`: Maximum number of records to return (default: 20, max: 100)",
+        "description": "List all attachments for a condition.",
         "operationId": "list_condition_attachments_api_v1_watches_conditions__condition_id__attachments_get",
         "security": [
           {
@@ -5679,7 +5591,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of condition attachments retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -5687,7 +5599,7 @@
                   "items": {
                     "$ref": "#/components/schemas/WatchConditionAttachmentList"
                   },
-                  "title": "Response 200 List Condition Attachments Api V1 Watches Conditions  Condition Id  Attachments Get"
+                  "title": "Response List Condition Attachments Api V1 Watches Conditions  Condition Id  Attachments Get"
                 }
               }
             }
@@ -5696,9 +5608,6 @@
             "description": "Condition not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Watch condition with ID 234 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5724,7 +5633,7 @@
           "attachments"
         ],
         "summary": "Download condition attachment",
-        "description": "Download the actual file content of a condition attachment.\n    \n    **Response:** Binary file content with appropriate Content-Type and Content-Disposition headers.",
+        "description": "Download condition attachment file.",
         "operationId": "download_condition_attachment_api_v1_attachments_condition__attachment_id__get",
         "security": [
           {
@@ -5744,75 +5653,18 @@
         ],
         "responses": {
           "200": {
-            "description": "File download successful",
+            "description": "Binary file content",
             "content": {
-              "image/jpeg": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/png": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/webp": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "image/gif": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
-              "application/pdf": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              },
               "application/octet-stream": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
                 }
               }
-            },
-            "headers": {
-              "Content-Disposition": {
-                "description": "Attachment filename for download",
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "Content-Type": {
-                "description": "MIME type of the file",
-                "schema": {
-                  "type": "string"
-                }
-              }
             }
           },
           "404": {
             "description": "Attachment not found",
-            "content": {
-              "application/json": {
-                "example": {
-                  "detail": "Condition attachment with ID 42 not found"
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorDetail"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
             "content": {
               "application/json": {
                 "schema": {
@@ -5837,8 +5689,8 @@
         "tags": [
           "attachments"
         ],
-        "summary": "Delete condition attachment",
-        "description": "Soft delete a condition attachment. The attachment is marked as deleted but not physically removed.\n    \n    **Authorization:** Requires manager or admin role.",
+        "summary": "Delete condition attachment (soft delete)",
+        "description": "Soft delete condition attachment (manager only).",
         "operationId": "delete_condition_attachment_api_v1_attachments_condition__attachment_id__delete",
         "security": [
           {
@@ -5858,10 +5710,10 @@
         ],
         "responses": {
           "204": {
-            "description": "Attachment deleted successfully (soft delete)"
+            "description": "Successful Response"
           },
           "403": {
-            "description": "Forbidden - requires manager or admin role",
+            "description": "Requires manager role",
             "content": {
               "application/json": {
                 "schema": {
@@ -5874,9 +5726,6 @@
             "description": "Attachment not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Condition attachment with ID 42 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5902,7 +5751,7 @@
           "attachments"
         ],
         "summary": "Get condition attachment metadata",
-        "description": "Retrieve metadata about a condition attachment without downloading the actual file.\n    \n    **Use Case:** Check file details before downloading or display attachment information in a list.",
+        "description": "Get condition attachment metadata.",
         "operationId": "get_condition_attachment_info_api_v1_attachments_condition__attachment_id__info_get",
         "security": [
           {
@@ -5922,7 +5771,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Attachment metadata retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -5935,9 +5784,6 @@
             "description": "Attachment not found",
             "content": {
               "application/json": {
-                "example": {
-                  "detail": "Condition attachment with ID 42 not found"
-                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorDetail"
                 }
@@ -5963,7 +5809,7 @@
           "audit"
         ],
         "summary": "Get Job Audit History",
-        "description": "Get complete audit history for a job.\n\nReturns a timeline of all changes made to the job.\nRequires manager or admin privileges.",
+        "description": "Get complete audit history for a job.\n\nReturns a timeline of all changes made to the job, ordered by most recent first.\nEach event includes a human-readable summary and detailed change information.\n\n**Pagination**: Use `skip` and `limit` query parameters.\n\n**Permissions**: Manager or Admin only.",
         "operationId": "get_job_audit_history_api_v1_audit_jobs__job_id__history_get",
         "security": [
           {
@@ -6016,8 +5862,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/AuditEventResponse"
                   },
                   "title": "Response Get Job Audit History Api V1 Audit Jobs  Job Id  History Get"
                 }
@@ -6043,7 +5888,7 @@
           "audit"
         ],
         "summary": "Get Indent Audit History",
-        "description": "Get complete audit history for an indent.\n\nReturns a timeline of all changes made to the indent.\nRequires manager or admin privileges.",
+        "description": "Get complete audit history for an indent.\n\nReturns a timeline of all changes made to the indent, ordered by most recent first.\nEach event includes a human-readable summary and detailed change information.\n\n**Pagination**: Use `skip` and `limit` query parameters.\n\n**Permissions**: Manager or Admin only.",
         "operationId": "get_indent_audit_history_api_v1_audit_indents__indent_id__history_get",
         "security": [
           {
@@ -6096,8 +5941,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/AuditEventResponse"
                   },
                   "title": "Response Get Indent Audit History Api V1 Audit Indents  Indent Id  History Get"
                 }
@@ -6123,7 +5967,7 @@
           "audit"
         ],
         "summary": "Get User Audit Actions",
-        "description": "Get all actions performed by a specific user.\n\nAdmin-only endpoint to track user activities.",
+        "description": "Get all actions performed by a specific user.\n\nReturns a complete history of all actions (creates, updates, deletes) performed by the user.\nUseful for tracking user activity and accountability.\n\n**Pagination**: Use `skip` and `limit` query parameters.\n\n**Permissions**: Admin only.",
         "operationId": "get_user_audit_actions_api_v1_audit_users__user_id__actions_get",
         "security": [
           {
@@ -6176,8 +6020,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/AuditEventResponse"
                   },
                   "title": "Response Get User Audit Actions Api V1 Audit Users  User Id  Actions Get"
                 }
@@ -6203,7 +6046,7 @@
           "audit"
         ],
         "summary": "Search Audit Events",
-        "description": "Search audit events with advanced filters.\n\nAdmin-only endpoint for comprehensive audit log queries.",
+        "description": "Search audit events with advanced filters.\n\nPowerful search endpoint for comprehensive audit log queries. All filters are optional and can be combined.\nResults are ordered by most recent first.\n\n**Common Use Cases**:\n- View all changes to a specific entity: `?entity_type=jobs&entity_id=42`\n- Track all actions by a user: `?user_id=5`\n- Find all deletions: `?action=delete`\n- Audit job status changes: `?entity_type=jobs&action=status_change`\n\n**Pagination**: Use `skip` and `limit` query parameters.\n\n**Permissions**: Admin only.",
         "operationId": "search_audit_events_api_v1_audit_get",
         "security": [
           {
@@ -6224,10 +6067,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by entity type (jobs, indents)",
+              "description": "Filter by entity type (e.g., 'jobs', 'indents', 'spare_parts')",
               "title": "Entity Type"
             },
-            "description": "Filter by entity type (jobs, indents)"
+            "description": "Filter by entity type (e.g., 'jobs', 'indents', 'spare_parts')"
           },
           {
             "name": "entity_id",
@@ -6242,10 +6085,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by entity ID",
+              "description": "Filter by specific entity ID",
               "title": "Entity Id"
             },
-            "description": "Filter by entity ID"
+            "description": "Filter by specific entity ID"
           },
           {
             "name": "user_id",
@@ -6260,10 +6103,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by user ID",
+              "description": "Filter by user who performed the action",
               "title": "User Id"
             },
-            "description": "Filter by user ID"
+            "description": "Filter by user who performed the action"
           },
           {
             "name": "action",
@@ -6278,10 +6121,10 @@
                   "type": "null"
                 }
               ],
-              "description": "Filter by action type (create, update, delete, etc.)",
+              "description": "Filter by action type: 'create', 'update', 'delete', 'status_change', 'delay_added', 'restore'",
               "title": "Action"
             },
-            "description": "Filter by action type (create, update, delete, etc.)"
+            "description": "Filter by action type: 'create', 'update', 'delete', 'status_change', 'delay_added', 'restore'"
           },
           {
             "name": "page",
@@ -6319,8 +6162,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/AuditEventResponse"
                   },
                   "title": "Response Search Audit Events Api V1 Audit Get"
                 }
@@ -6346,7 +6188,7 @@
           "audit"
         ],
         "summary": "Get My Audit Actions",
-        "description": "Get audit trail of current user's own actions.\n\nAny authenticated user can view their own action history.",
+        "description": "Get audit trail of current user's own actions.\n\nReturns a complete history of all actions performed by the currently authenticated user.\nUseful for users to review their own activity.\n\n**Pagination**: Use `skip` and `limit` query parameters (default: skip=0, limit=50).\n\n**Permissions**: Any authenticated user (can only view their own actions).",
         "operationId": "get_my_audit_actions_api_v1_audit_my_actions_get",
         "security": [
           {
@@ -6390,8 +6232,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "additionalProperties": true
+                    "$ref": "#/components/schemas/AuditEventResponse"
                   },
                   "title": "Response Get My Audit Actions Api V1 Audit My Actions Get"
                 }
@@ -7038,6 +6879,283 @@
         ]
       }
     },
+    "/api/v1/system/cleanup/preview": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Preview cleanup candidates",
+        "description": "Get a list of jobs that would be affected by attachment cleanup",
+        "operationId": "preview_cleanup_api_v1_system_cleanup_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CleanupPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanupPreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/cleanup/run": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Run attachment cleanup",
+        "description": "Delete attachments from old completed/delivered jobs",
+        "operationId": "run_cleanup_api_v1_system_cleanup_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CleanupRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CleanupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/backup/run": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Create database backup",
+        "description": "Create a backup of the database with optional attachment archiving",
+        "operationId": "run_backup_api_v1_system_backup_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/backup/list": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "List all backups",
+        "description": "Get a list of all available database backups",
+        "operationId": "list_backups_api_v1_system_backup_list_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/backup/download/{filename}": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Download backup file",
+        "description": "Download a specific backup file",
+        "operationId": "download_backup_api_v1_system_backup_download__filename__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/backup/{filename}": {
+      "delete": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Delete backup file",
+        "description": "Delete a specific backup file",
+        "operationId": "delete_backup_api_v1_system_backup__filename__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Filename"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/workers/status": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get worker status",
+        "description": "Get the status of scheduled background workers",
+        "operationId": "get_worker_status_api_v1_system_workers_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -7063,13 +7181,11 @@
       "AttachmentUploadResponse": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Unique identifier for the uploaded attachment",
             "examples": [42, 123]
           },
           "file_name": {
-            "type": "string",
             "title": "File Name",
             "description": "Original filename as uploaded",
             "examples": [
@@ -7077,14 +7193,6 @@
             ]
           },
           "mime_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Mime Type",
             "description": "Detected MIME type of the file",
             "examples": [
@@ -7092,22 +7200,11 @@
             ]
           },
           "file_size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "File Size Bytes",
             "description": "File size in bytes",
             "examples": [2458624]
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Timestamp when the file was uploaded",
             "examples": [
@@ -7115,10 +7212,8 @@
             ]
           },
           "message": {
-            "type": "string",
             "title": "Message",
             "description": "Success message",
-            "default": "File uploaded successfully",
             "examples": [
               "File uploaded successfully"
             ]
@@ -7151,18 +7246,167 @@
           }
         ]
       },
+      "AuditChangeDetail": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field",
+            "description": "Display name of the field that changed"
+          },
+          "old_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old Value",
+            "description": "Previous value (human-readable)"
+          },
+          "new_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Value",
+            "description": "New value (human-readable)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field"
+        ],
+        "title": "AuditChangeDetail",
+        "description": "Details of a field change in an audit event"
+      },
+      "AuditEventResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Unique audit event ID"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "ID of user who performed the action (null for system actions)"
+          },
+          "user_name": {
+            "type": "string",
+            "title": "User Name",
+            "description": "Name of user who performed the action (or 'System')"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "description": "Type of entity (e.g., 'jobs', 'indents', 'spare_parts')"
+          },
+          "entity_id": {
+            "type": "integer",
+            "title": "Entity Id",
+            "description": "ID of the entity that was modified"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Action type: 'create', 'update', 'delete', 'status_change', 'delay_added', 'restore'"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "description": "Human-readable summary of the action (e.g., 'Created Job 2024/001')"
+          },
+          "change_details": {
+            "items": {
+              "$ref": "#/components/schemas/AuditChangeDetail"
+            },
+            "type": "array",
+            "title": "Change Details",
+            "description": "List of field changes with old/new values"
+          },
+          "changes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Changes",
+            "description": "Raw changes data for advanced processing"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Additional context (e.g., IP address, user agent)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Timestamp when the action occurred"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_name",
+          "entity_type",
+          "entity_id",
+          "action",
+          "summary",
+          "change_details",
+          "changes",
+          "metadata",
+          "created_at"
+        ],
+        "title": "AuditEventResponse",
+        "description": "Humanized audit event response.\n\nEach audit event represents a single action (create/update/delete) on an entity.\nThe response is pre-formatted for display, with human-readable summaries and change details.",
+        "example": {
+          "action": "status_change",
+          "change_details": [
+            {
+              "field": "Status",
+              "new_value": "In Progress",
+              "old_value": "Pending"
+            }
+          ],
+          "changes": {
+            "identifier": "2024/001",
+            "status": {
+              "new": "in_progress",
+              "old": "pending"
+            }
+          },
+          "created_at": "2024-12-14T10:30:00Z",
+          "entity_id": 42,
+          "entity_type": "jobs",
+          "id": 123,
+          "metadata": {
+            "ip_address": "192.168.1.1",
+            "user_agent": "Mozilla/5.0..."
+          },
+          "summary": "Changed status from Pending to In Progress",
+          "user_id": 5,
+          "user_name": "John Doe"
+        }
+      },
       "AvailableReportsResponse": {
         "properties": {
           "date_wise": {
-            "items": {
-              "$ref": "#/components/schemas/ReportTypeInfo"
-            },
-            "type": "array",
             "title": "Date Wise",
             "description": "Date-wise report types"
           },
           "delay": {
-            "$ref": "#/components/schemas/ReportTypeInfo",
             "description": "Delay report information"
           }
         },
@@ -7174,13 +7418,136 @@
         "title": "AvailableReportsResponse",
         "description": "Response listing available report types."
       },
+      "BackupInfo": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "file_size_mb": {
+            "type": "number",
+            "title": "File Size Mb"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "file_size_mb",
+          "created_at"
+        ],
+        "title": "BackupInfo",
+        "description": "Information about a backup file"
+      },
+      "BackupListResponse": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "backups": {
+            "items": {
+              "$ref": "#/components/schemas/BackupInfo"
+            },
+            "type": "array",
+            "title": "Backups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "backups"
+        ],
+        "title": "BackupListResponse",
+        "description": "Response for listing backups"
+      },
+      "BackupResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "backup_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Path"
+          },
+          "file_size_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size Mb"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "BackupResponse",
+        "description": "Response for backup operation"
+      },
+      "BackupRunRequest": {
+        "properties": {
+          "include_attachments": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Attachments",
+            "description": "Include uploads directory in backup. Defaults to system setting."
+          }
+        },
+        "type": "object",
+        "title": "BackupRunRequest",
+        "description": "Request for creating a backup"
+      },
       "Body_upload_complaint_attachment_api_v1_watches_complaints__complaint_id__attachments_post": {
         "properties": {
           "file": {
             "type": "string",
             "format": "binary",
             "title": "File",
-            "description": "File to upload (JPEG, PNG, WebP, GIF, or PDF, max 10MB)"
+            "description": "File to upload (max 10MB)"
           }
         },
         "type": "object",
@@ -7195,7 +7562,7 @@
             "type": "string",
             "format": "binary",
             "title": "File",
-            "description": "File to upload (JPEG, PNG, WebP, GIF, or PDF, max 10MB)"
+            "description": "File to upload (max 10MB)"
           }
         },
         "type": "object",
@@ -7210,7 +7577,7 @@
             "type": "string",
             "format": "binary",
             "title": "File",
-            "description": "File to upload (JPEG, PNG, WebP, GIF, or PDF, max 10MB)"
+            "description": "File to upload (max 10MB)"
           }
         },
         "type": "object",
@@ -7249,11 +7616,9 @@
       "BrandList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "name": {
-            "type": "string",
             "title": "Name"
           }
         },
@@ -7268,34 +7633,18 @@
       "BrandRead": {
         "properties": {
           "name": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
             "title": "Name"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Description"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           }
         },
@@ -7364,6 +7713,211 @@
           }
         ]
       },
+      "CleanupCandidate": {
+        "properties": {
+          "job_id": {
+            "type": "integer",
+            "title": "Job Id"
+          },
+          "job_number": {
+            "type": "string",
+            "title": "Job Number"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "attachment_count": {
+            "type": "integer",
+            "title": "Attachment Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "job_number",
+          "status",
+          "completed_at",
+          "delivered_at",
+          "attachment_count"
+        ],
+        "title": "CleanupCandidate",
+        "description": "A job eligible for cleanup"
+      },
+      "CleanupPreviewRequest": {
+        "properties": {
+          "retention_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Days",
+            "description": "Number of days to retain attachments. Defaults to system setting."
+          }
+        },
+        "type": "object",
+        "title": "CleanupPreviewRequest",
+        "description": "Request for previewing cleanup candidates"
+      },
+      "CleanupPreviewResponse": {
+        "properties": {
+          "retention_days": {
+            "type": "integer",
+            "title": "Retention Days"
+          },
+          "cutoff_date": {
+            "type": "string",
+            "title": "Cutoff Date"
+          },
+          "total_jobs": {
+            "type": "integer",
+            "title": "Total Jobs"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CleanupCandidate"
+            },
+            "type": "array",
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "retention_days",
+          "cutoff_date",
+          "total_jobs",
+          "candidates"
+        ],
+        "title": "CleanupPreviewResponse",
+        "description": "Response for cleanup preview"
+      },
+      "CleanupResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "files_deleted": {
+            "type": "integer",
+            "title": "Files Deleted"
+          },
+          "space_freed_mb": {
+            "type": "number",
+            "title": "Space Freed Mb"
+          },
+          "jobs_processed": {
+            "type": "integer",
+            "title": "Jobs Processed"
+          },
+          "duration_seconds": {
+            "type": "number",
+            "title": "Duration Seconds"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "files_deleted",
+          "space_freed_mb",
+          "jobs_processed",
+          "duration_seconds"
+        ],
+        "title": "CleanupResponse",
+        "description": "Response for cleanup operation"
+      },
+      "CleanupRunRequest": {
+        "properties": {
+          "retention_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Days",
+            "description": "Number of days to retain attachments. Defaults to system setting."
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id",
+            "description": "If provided, only clean up this specific job"
+          }
+        },
+        "type": "object",
+        "title": "CleanupRunRequest",
+        "description": "Request for running cleanup"
+      },
       "ComplaintNodeCreate": {
         "properties": {
           "label": {
@@ -7429,6 +7983,18 @@
             ],
             "title": "Effective To",
             "description": "Date after which this node is no longer available"
+          },
+          "default_spare_part_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Spare Part Id",
+            "description": "Default spare part ID for this complaint (leaf nodes only)"
           }
         },
         "type": "object",
@@ -7441,76 +8007,35 @@
       "ComplaintNodeList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "label": {
-            "type": "string",
             "title": "Label"
           },
           "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Code"
           },
           "parent_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Parent Id"
           },
           "sort_order": {
-            "type": "integer",
             "title": "Sort Order"
           },
           "effective_from": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective From"
           },
           "effective_to": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective To"
           },
+          "default_spare_part_id": {
+            "title": "Default Spare Part Id"
+          },
           "is_available": {
-            "type": "boolean",
             "title": "Is Available",
-            "description": "Whether node is currently available",
-            "default": true
+            "description": "Whether node is currently available"
           },
           "children": {
-            "items": {
-              "$ref": "#/components/schemas/ComplaintNodeList"
-            },
-            "type": "array",
-            "title": "Children",
-            "default": []
+            "title": "Children"
           }
         },
         "type": "object",
@@ -7525,94 +8050,55 @@
       "ComplaintNodeRead": {
         "properties": {
           "label": {
-            "type": "string",
-            "maxLength": 500,
-            "minLength": 1,
             "title": "Label",
             "description": "Complaint label"
           },
           "code": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 100
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Code",
             "description": "Internal code"
           },
           "parent_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Parent Id",
             "description": "Parent node ID for hierarchical structure"
           },
           "sort_order": {
-            "type": "integer",
             "title": "Sort Order",
-            "description": "Display order",
-            "default": 0
+            "description": "Display order"
           },
           "effective_from": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective From",
             "description": "Date from which this node becomes available"
           },
           "effective_to": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective To",
             "description": "Date after which this node is no longer available"
           },
+          "default_spare_part_id": {
+            "title": "Default Spare Part Id",
+            "description": "Default spare part ID for this complaint (leaf nodes only)"
+          },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           },
           "deleted_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Deleted At"
+          },
+          "parent_label": {
+            "title": "Parent Label",
+            "description": "Label of the parent node if exists"
+          },
+          "is_leaf": {
+            "title": "Is Leaf",
+            "description": "Whether this node is a leaf node (has no children)"
+          },
+          "default_spare_part": {
+            "description": "Default spare part details if configured"
           }
         },
         "type": "object",
@@ -7697,6 +8183,17 @@
               }
             ],
             "title": "Effective To"
+          },
+          "default_spare_part_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Spare Part Id"
           }
         },
         "type": "object",
@@ -7769,63 +8266,30 @@
       "ComplaintPricingRuleRead": {
         "properties": {
           "complaint_node_id": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
             "title": "Complaint Node Id",
             "description": "ID of the complaint node (must be a root node)"
           },
           "price_percentage": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Price Percentage",
             "description": "Price/parts percentage (0-100). NULL means no parts cost."
           },
           "labour_percentage": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Labour Percentage",
             "description": "Labour percentage (0-100). NULL means no labour cost."
           },
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Pricing rule ID"
           },
           "complaint_node_label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Complaint Node Label",
             "description": "Label of the complaint node (denormalized for convenience)"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Creation timestamp"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At",
             "description": "Last update timestamp"
           }
@@ -7971,76 +8435,32 @@
       "ConditionNodeList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "label": {
-            "type": "string",
             "title": "Label"
           },
           "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Code"
           },
           "parent_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Parent Id"
           },
           "sort_order": {
-            "type": "integer",
             "title": "Sort Order"
           },
           "effective_from": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective From"
           },
           "effective_to": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective To"
           },
           "is_available": {
-            "type": "boolean",
             "title": "Is Available",
-            "description": "Whether node is currently available",
-            "default": true
+            "description": "Whether node is currently available"
           },
           "children": {
-            "items": {
-              "$ref": "#/components/schemas/ConditionNodeList"
-            },
-            "type": "array",
-            "title": "Children",
-            "default": []
+            "title": "Children"
           }
         },
         "type": "object",
@@ -8055,94 +8475,44 @@
       "ConditionNodeRead": {
         "properties": {
           "label": {
-            "type": "string",
-            "maxLength": 500,
-            "minLength": 1,
             "title": "Label",
             "description": "Condition label"
           },
           "code": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 100
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Code",
             "description": "Internal code"
           },
           "parent_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Parent Id",
             "description": "Parent node ID for hierarchical structure"
           },
           "sort_order": {
-            "type": "integer",
             "title": "Sort Order",
-            "description": "Display order",
-            "default": 0
+            "description": "Display order"
           },
           "effective_from": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective From",
             "description": "Date from which this node becomes available"
           },
           "effective_to": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Effective To",
             "description": "Date after which this node is no longer available"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           },
           "deleted_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Deleted At"
+          },
+          "parent_label": {
+            "title": "Parent Label",
+            "description": "Label of the parent node if exists"
           }
         },
         "type": "object",
@@ -8347,40 +8717,123 @@
         "title": "CustomerCreate",
         "description": "Schema for creating a new customer."
       },
-      "CustomerInJob": {
+      "CustomerDetail": {
         "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
           "name": {
-            "type": "string",
             "title": "Name"
           },
           "contact_number": {
-            "type": "string",
+            "title": "Contact Number"
+          },
+          "address": {
+            "title": "Address"
+          },
+          "city": {
+            "title": "City"
+          },
+          "state": {
+            "title": "State"
+          },
+          "country": {
+            "title": "Country"
+          },
+          "postal_code": {
+            "title": "Postal Code"
+          },
+          "email": {
+            "title": "Email"
+          },
+          "date_of_birth": {
+            "title": "Date Of Birth"
+          },
+          "gender": {
+            "title": "Gender"
+          },
+          "id": {
+            "title": "Id"
+          },
+          "created_at": {
+            "title": "Created At"
+          },
+          "updated_at": {
+            "title": "Updated At"
+          },
+          "jobs": {
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "contact_number",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CustomerDetail",
+        "description": "Detailed customer schema with related jobs.\n\nUse this for single customer detail view to include all job history.\nRequires eager loading of jobs relationship.",
+        "example": {
+          "address": "123 Main Street, Apartment 4B",
+          "city": "Mumbai",
+          "contact_number": "+1234567890",
+          "country": "India",
+          "created_at": "2025-01-01T10:00:00Z",
+          "date_of_birth": "1985-05-15",
+          "email": "john.doe@example.com",
+          "gender": "Male",
+          "id": 123,
+          "jobs": [
+            {
+              "created_at": "2025-12-10T10:00:00Z",
+              "estimated_cost": 5000,
+              "estimated_delivery_date": "2025-12-25",
+              "id": 1,
+              "job_number": "JOB-2025-0001",
+              "status": "booked"
+            },
+            {
+              "actual_cost": 4200,
+              "completed_at": "2025-12-12T15:30:00Z",
+              "created_at": "2025-12-01T09:00:00Z",
+              "estimated_cost": 4500,
+              "estimated_delivery_date": "2025-12-15",
+              "id": 2,
+              "job_number": "JOB-2025-0002",
+              "status": "completed"
+            },
+            {
+              "actual_cost": 3500,
+              "completed_at": "2024-11-08T14:00:00Z",
+              "created_at": "2024-11-01T08:00:00Z",
+              "delivered_at": "2024-11-12T10:30:00Z",
+              "estimated_cost": 3500,
+              "estimated_delivery_date": "2024-11-10",
+              "id": 3,
+              "job_number": "JOB-2024-0156",
+              "status": "delivered"
+            }
+          ],
+          "name": "John Doe",
+          "postal_code": "400001",
+          "state": "Maharashtra",
+          "updated_at": "2025-12-10T15:30:00Z"
+        }
+      },
+      "CustomerInJob": {
+        "properties": {
+          "id": {
+            "title": "Id"
+          },
+          "name": {
+            "title": "Name"
+          },
+          "contact_number": {
             "title": "Contact Number"
           },
           "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Email"
           },
           "city": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "City"
           }
         },
@@ -8395,171 +8848,45 @@
         "title": "CustomerInJob",
         "description": "Lightweight customer schema for nested job responses."
       },
-      "CustomerList": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "contact_number": {
-            "type": "string",
-            "title": "Contact Number"
-          },
-          "city": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "City"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "contact_number",
-          "city",
-          "email"
-        ],
-        "title": "CustomerList",
-        "description": "Simplified schema for customer lists."
-      },
       "CustomerRead": {
         "properties": {
           "name": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
             "title": "Name"
           },
           "contact_number": {
-            "type": "string",
-            "maxLength": 20,
-            "minLength": 1,
             "title": "Contact Number"
           },
           "address": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Address"
           },
           "city": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "City"
           },
           "state": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "State"
           },
           "country": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Country"
           },
           "postal_code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Postal Code"
           },
           "email": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "email"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Email"
           },
           "date_of_birth": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Date Of Birth"
           },
           "gender": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 50
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Gender"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           }
         },
@@ -8697,6 +9024,41 @@
         "type": "object",
         "title": "CustomerUpdate",
         "description": "Schema for updating a customer (all fields optional)."
+      },
+      "DashboardStatistics": {
+        "properties": {
+          "total_active_jobs": {
+            "title": "Total Active Jobs",
+            "description": "Total active jobs (not delivered or cancelled)"
+          },
+          "in_progress": {
+            "title": "In Progress",
+            "description": "Jobs in progress (booked, indented, parts received)"
+          },
+          "ready_for_delivery": {
+            "title": "Ready For Delivery",
+            "description": "Jobs completed and ready for delivery"
+          },
+          "completed_today": {
+            "title": "Completed Today",
+            "description": "Jobs completed today"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_active_jobs",
+          "in_progress",
+          "ready_for_delivery",
+          "completed_today"
+        ],
+        "title": "DashboardStatistics",
+        "description": "Dashboard statistics for jobs overview.",
+        "example": {
+          "completed_today": 12,
+          "in_progress": 24,
+          "ready_for_delivery": 12,
+          "total_active_jobs": 12
+        }
       },
       "DateWiseReportFilters": {
         "properties": {
@@ -8849,36 +9211,28 @@
       "EstimateBreakdown": {
         "properties": {
           "ucp_rate": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
             "title": "Ucp Rate",
             "description": "Unit Customer Price (UCP) rate"
           },
           "total_parts_cost": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
             "title": "Total Parts Cost",
             "description": "Total parts/price cost"
           },
           "total_labour_cost": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
             "title": "Total Labour Cost",
             "description": "Total labour cost"
           },
           "estimated_total": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
             "title": "Estimated Total",
             "description": "Total estimated cost"
           },
           "breakdown": {
-            "items": {
-              "$ref": "#/components/schemas/PricingBreakdownItem"
-            },
-            "type": "array",
             "title": "Breakdown",
             "description": "Detailed breakdown by complaint category"
+          },
+          "max_estimated_delivery_days": {
+            "title": "Max Estimated Delivery Days",
+            "description": "Maximum estimated delivery days from complaints with indent_required=True"
           }
         },
         "type": "object",
@@ -8910,6 +9264,7 @@
               }
             ],
             "estimated_total": 620,
+            "max_estimated_delivery_days": 30,
             "total_labour_cost": 150,
             "total_parts_cost": 470,
             "ucp_rate": 1000
@@ -8973,55 +9328,6 @@
         "title": "IndentCreate",
         "description": "Schema for creating a new indent."
       },
-      "IndentList": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "serial_number": {
-            "type": "string",
-            "title": "Serial Number"
-          },
-          "job_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Job Id"
-          },
-          "supplier_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Supplier Id"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "serial_number",
-          "job_id",
-          "supplier_id",
-          "created_at"
-        ],
-        "title": "IndentList",
-        "description": "Simplified schema for indent lists."
-      },
       "IndentPartCreate": {
         "properties": {
           "spare_part_id": {
@@ -9052,52 +9358,6 @@
         "title": "IndentPartCreate",
         "description": "Schema for adding a spare part to an indent."
       },
-      "IndentPartSummary": {
-        "properties": {
-          "indent_part_id": {
-            "type": "integer",
-            "title": "Indent Part Id"
-          },
-          "spare_part_id": {
-            "type": "integer",
-            "title": "Spare Part Id"
-          },
-          "part_name": {
-            "type": "string",
-            "title": "Part Name"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "quantity": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Quantity"
-          }
-        },
-        "type": "object",
-        "required": [
-          "indent_part_id",
-          "spare_part_id",
-          "part_name"
-        ],
-        "title": "IndentPartSummary",
-        "description": "Summary of a spare part in an indent (for nested display).\n\nThis flattens the indent_parts → spare_part relationship for easier frontend consumption."
-      },
       "IndentPartUpdate": {
         "properties": {
           "quantity": {
@@ -9121,40 +9381,25 @@
       "IndentPartWithDetails": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "indent_id": {
-            "type": "integer",
             "title": "Indent Id"
           },
           "spare_part_id": {
-            "type": "integer",
             "title": "Spare Part Id"
           },
           "quantity": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Quantity"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           },
           "spare_part": {
-            "$ref": "#/components/schemas/SparePartRead"
+
           }
         },
         "type": "object",
@@ -9173,58 +9418,26 @@
       "IndentRead": {
         "properties": {
           "job_id": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Job Id",
             "description": "Job ID"
           },
           "supplier_id": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Supplier Id",
             "description": "Supplier ID"
           },
           "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Notes"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "serial_number": {
-            "type": "string",
             "title": "Serial Number"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           }
         },
@@ -9237,6 +9450,37 @@
         ],
         "title": "IndentRead",
         "description": "Schema for reading indent data."
+      },
+      "IndentSuggestionResponse": {
+        "properties": {
+          "watch_id": {
+            "title": "Watch Id"
+          },
+          "job_id": {
+            "title": "Job Id"
+          },
+          "suggestions": {
+            "title": "Suggestions",
+            "description": "Suggested spare parts with details"
+          },
+          "max_estimated_delivery_days": {
+            "title": "Max Estimated Delivery Days",
+            "description": "Overall maximum estimated delivery days"
+          },
+          "total_parts_required": {
+            "title": "Total Parts Required",
+            "description": "Total number of unique spare parts required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "watch_id",
+          "job_id",
+          "suggestions",
+          "total_parts_required"
+        ],
+        "title": "IndentSuggestionResponse",
+        "description": "Response schema for indent suggestions from watch complaints."
       },
       "IndentUpdate": {
         "properties": {
@@ -9285,67 +9529,33 @@
       "IndentWithParts": {
         "properties": {
           "job_id": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Job Id",
             "description": "Job ID"
           },
           "supplier_id": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Supplier Id",
             "description": "Supplier ID"
           },
           "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Notes"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "serial_number": {
-            "type": "string",
             "title": "Serial Number"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           },
           "parts": {
-            "items": {
-              "$ref": "#/components/schemas/IndentPartSummary"
-            },
-            "type": "array",
-            "title": "Parts",
-            "default": []
+            "title": "Parts"
+          },
+          "supplier": {
+
           }
         },
         "type": "object",
@@ -9356,7 +9566,7 @@
           "updated_at"
         ],
         "title": "IndentWithParts",
-        "description": "Schema for reading indent data with associated parts.\n\nUse this when you need to display an indent with all its spare parts.\nRequires eager loading of indent_parts relationship."
+        "description": "Schema for reading indent data with associated parts and supplier.\n\nUse this when you need to display an indent with all its spare parts and supplier info.\nRequires eager loading of indent_parts and supplier relationships."
       },
       "JobCreate": {
         "properties": {
@@ -9420,277 +9630,161 @@
         "title": "JobDelayCreate",
         "description": "Schema for adding a delay to a job."
       },
-      "JobList": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "job_number": {
-            "type": "string",
-            "title": "Job Number"
-          },
-          "customer_id": {
-            "type": "integer",
-            "title": "Customer Id"
-          },
-          "customer": {
-            "$ref": "#/components/schemas/CustomerInJob"
-          },
-          "status": {
-            "$ref": "#/components/schemas/JobStatus"
-          },
-          "estimated_cost": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Estimated Cost"
-          },
-          "estimated_delivery_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Estimated Delivery Date"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "job_number",
-          "customer_id",
-          "customer",
-          "status",
-          "estimated_cost",
-          "estimated_delivery_date",
-          "created_at"
-        ],
-        "title": "JobList",
-        "description": "Simplified schema for job lists."
-      },
-      "JobRead": {
+      "JobDetail": {
         "properties": {
           "customer_id": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
             "title": "Customer Id",
             "description": "Customer ID"
           },
           "estimated_cost": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Estimated Cost"
           },
           "estimated_parts_cost": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Estimated Parts Cost"
           },
           "estimated_labour_cost": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Estimated Labour Cost"
           },
           "deduction": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Deduction"
           },
           "deduction_note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Deduction Note"
           },
           "additional_charge": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Additional Charge"
           },
           "additional_charge_note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Additional Charge Note"
           },
           "actual_cost": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Actual Cost"
           },
           "estimated_delivery_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Estimated Delivery Date"
           },
           "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Notes"
           },
           "status": {
-            "$ref": "#/components/schemas/JobStatus",
-            "default": "booked"
+
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "job_number": {
-            "type": "string",
             "title": "Job Number"
           },
           "customer": {
-            "$ref": "#/components/schemas/CustomerInJob"
+
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           },
           "completed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Completed At"
           },
           "delivered_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Delivered At"
           },
           "delay_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Delay Reason"
           },
           "original_estimated_delivery_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Original Estimated Delivery Date"
           },
           "delayed_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "title": "Delayed At"
+          },
+          "watch": {
+
+          },
+          "indents": {
+            "title": "Indents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "customer_id",
+          "id",
+          "job_number",
+          "customer",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobDetail",
+        "description": "Detailed job schema with related entities (watch and indents).\n\nUse this for single job detail view to include all nested relationships.\nRequires eager loading of watch, indents, and their related data."
+      },
+      "JobRead": {
+        "properties": {
+          "customer_id": {
+            "title": "Customer Id",
+            "description": "Customer ID"
+          },
+          "estimated_cost": {
+            "title": "Estimated Cost"
+          },
+          "estimated_parts_cost": {
+            "title": "Estimated Parts Cost"
+          },
+          "estimated_labour_cost": {
+            "title": "Estimated Labour Cost"
+          },
+          "deduction": {
+            "title": "Deduction"
+          },
+          "deduction_note": {
+            "title": "Deduction Note"
+          },
+          "additional_charge": {
+            "title": "Additional Charge"
+          },
+          "additional_charge_note": {
+            "title": "Additional Charge Note"
+          },
+          "actual_cost": {
+            "title": "Actual Cost"
+          },
+          "estimated_delivery_date": {
+            "title": "Estimated Delivery Date"
+          },
+          "notes": {
+            "title": "Notes"
+          },
+          "status": {
+
+          },
+          "id": {
+            "title": "Id"
+          },
+          "job_number": {
+            "title": "Job Number"
+          },
+          "customer": {
+
+          },
+          "created_at": {
+            "title": "Created At"
+          },
+          "updated_at": {
+            "title": "Updated At"
+          },
+          "completed_at": {
+            "title": "Completed At"
+          },
+          "delivered_at": {
+            "title": "Delivered At"
+          },
+          "delay_reason": {
+            "title": "Delay Reason"
+          },
+          "original_estimated_delivery_date": {
+            "title": "Original Estimated Delivery Date"
+          },
+          "delayed_at": {
             "title": "Delayed At"
           }
         },
@@ -9915,15 +10009,10 @@
       "PaginatedResponse_BrandList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/BrandList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -9937,15 +10026,10 @@
       "PaginatedResponse_ComplaintPricingRuleRead_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/ComplaintPricingRuleRead"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -9959,15 +10043,10 @@
       "PaginatedResponse_CustomerList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/CustomerList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -9981,15 +10060,10 @@
       "PaginatedResponse_IndentList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/IndentList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -10003,15 +10077,10 @@
       "PaginatedResponse_JobList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/JobList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -10025,15 +10094,10 @@
       "PaginatedResponse_SparePartList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/SparePartList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -10047,15 +10111,10 @@
       "PaginatedResponse_SupplierList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/SupplierList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -10069,15 +10128,10 @@
       "PaginatedResponse_UserList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/UserList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -10091,15 +10145,10 @@
       "PaginatedResponse_WatchList_": {
         "properties": {
           "items": {
-            "items": {
-              "$ref": "#/components/schemas/WatchList"
-            },
-            "type": "array",
             "title": "Items",
             "description": "List of items"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMeta",
             "description": "Pagination metadata"
           }
         },
@@ -10113,32 +10162,26 @@
       "PaginationMeta": {
         "properties": {
           "page": {
-            "type": "integer",
             "title": "Page",
             "description": "Current page number"
           },
           "page_size": {
-            "type": "integer",
             "title": "Page Size",
             "description": "Items per page"
           },
           "total": {
-            "type": "integer",
             "title": "Total",
             "description": "Total number of items"
           },
           "total_pages": {
-            "type": "integer",
             "title": "Total Pages",
             "description": "Total number of pages"
           },
           "has_next": {
-            "type": "boolean",
             "title": "Has Next",
             "description": "Whether there is a next page"
           },
           "has_previous": {
-            "type": "boolean",
             "title": "Has Previous",
             "description": "Whether there is a previous page"
           }
@@ -10158,36 +10201,26 @@
       "PaginationMetadata": {
         "properties": {
           "page": {
-            "type": "integer",
-            "minimum": 1,
             "title": "Page",
             "description": "Current page number"
           },
           "page_size": {
-            "type": "integer",
-            "minimum": 1,
             "title": "Page Size",
             "description": "Results per page"
           },
           "total": {
-            "type": "integer",
-            "minimum": 0,
             "title": "Total",
             "description": "Total number of results"
           },
           "total_pages": {
-            "type": "integer",
-            "minimum": 0,
             "title": "Total Pages",
             "description": "Total number of pages"
           },
           "has_next": {
-            "type": "boolean",
             "title": "Has Next",
             "description": "Whether there is a next page"
           },
           "has_previous": {
-            "type": "boolean",
             "title": "Has Previous",
             "description": "Whether there is a previous page"
           }
@@ -10219,57 +10252,6 @@
         "title": "PasswordReset",
         "description": "Schema for admin password reset."
       },
-      "PricingBreakdownItem": {
-        "properties": {
-          "complaint_node_id": {
-            "type": "integer",
-            "title": "Complaint Node Id",
-            "description": "Root complaint node ID"
-          },
-          "complaint_label": {
-            "type": "string",
-            "title": "Complaint Label",
-            "description": "Label of the complaint category"
-          },
-          "parts_cost": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-            "title": "Parts Cost",
-            "description": "Parts cost for this complaint"
-          },
-          "labour_cost": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-            "title": "Labour Cost",
-            "description": "Labour cost for this complaint"
-          },
-          "subtotal": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-            "title": "Subtotal",
-            "description": "Total cost for this complaint"
-          }
-        },
-        "type": "object",
-        "required": [
-          "complaint_node_id",
-          "complaint_label",
-          "parts_cost",
-          "labour_cost",
-          "subtotal"
-        ],
-        "title": "PricingBreakdownItem",
-        "description": "Single item in the pricing breakdown.",
-        "examples": [
-          {
-            "complaint_label": "Case",
-            "complaint_node_id": 5,
-            "labour_cost": 100,
-            "parts_cost": 350,
-            "subtotal": 450
-          }
-        ]
-      },
       "RecalculatePricingRequest": {
         "properties": {
           "apply_to_job": {
@@ -10294,23 +10276,13 @@
       "RecalculatePricingResponse": {
         "properties": {
           "estimate": {
-            "$ref": "#/components/schemas/EstimateBreakdown",
             "description": "Calculated pricing estimate"
           },
           "applied": {
-            "type": "boolean",
             "title": "Applied",
             "description": "Whether the estimate was applied to the job"
           },
           "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Message",
             "description": "Optional message about the recalculation"
           }
@@ -10353,22 +10325,18 @@
       "ReportTypeInfo": {
         "properties": {
           "type": {
-            "type": "string",
             "title": "Type",
             "description": "Report type identifier"
           },
           "name": {
-            "type": "string",
             "title": "Name",
             "description": "Human-readable report name"
           },
           "description": {
-            "type": "string",
             "title": "Description",
             "description": "Report description"
           },
           "requires_date_range": {
-            "type": "boolean",
             "title": "Requires Date Range",
             "description": "Whether this report requires date range"
           }
@@ -10405,41 +10373,22 @@
       "SearchResponse": {
         "properties": {
           "results": {
-            "items": {
-              "$ref": "#/components/schemas/SearchResult"
-            },
-            "type": "array",
             "title": "Results",
             "description": "Search results"
           },
           "total": {
-            "type": "integer",
-            "minimum": 0,
             "title": "Total",
             "description": "Total number of matching results"
           },
           "query": {
-            "type": "string",
             "title": "Query",
             "description": "The search query that was executed"
           },
           "entities_searched": {
-            "items": {
-              "type": "string",
-              "enum": [
-                "customer",
-                "job",
-                "watch",
-                "supplier",
-                "brand"
-              ]
-            },
-            "type": "array",
             "title": "Entities Searched",
             "description": "Entity types that were searched"
           },
           "pagination": {
-            "$ref": "#/components/schemas/PaginationMetadata",
             "description": "Pagination information"
           }
         },
@@ -10452,81 +10401,6 @@
         ],
         "title": "SearchResponse",
         "description": "Response schema for global search."
-      },
-      "SearchResult": {
-        "properties": {
-          "entity_type": {
-            "type": "string",
-            "enum": [
-              "customer",
-              "job",
-              "watch",
-              "supplier",
-              "brand"
-            ],
-            "title": "Entity Type",
-            "description": "Type of entity"
-          },
-          "entity_id": {
-            "type": "integer",
-            "title": "Entity Id",
-            "description": "Primary key of the entity"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title",
-            "description": "Main display text"
-          },
-          "subtitle": {
-            "type": "string",
-            "title": "Subtitle",
-            "description": "Secondary information"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description",
-            "description": "Additional context/snippet"
-          },
-          "relevance_score": {
-            "type": "number",
-            "maximum": 1,
-            "minimum": 0,
-            "title": "Relevance Score",
-            "description": "Relevance score (0-1)"
-          },
-          "matched_fields": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Matched Fields",
-            "description": "Fields that matched the query"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At",
-            "description": "Entity creation timestamp"
-          }
-        },
-        "type": "object",
-        "required": [
-          "entity_type",
-          "entity_id",
-          "title",
-          "subtitle",
-          "relevance_score",
-          "created_at"
-        ],
-        "title": "SearchResult",
-        "description": "Individual search result."
       },
       "SparePartCreate": {
         "properties": {
@@ -10547,6 +10421,20 @@
             ],
             "title": "Description",
             "description": "Part description"
+          },
+          "estimated_delivery_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Delivery Days",
+            "description": "Estimated delivery time in days (1-365)"
           }
         },
         "type": "object",
@@ -10559,30 +10447,24 @@
       "SparePartList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "part_name": {
-            "type": "string",
             "title": "Part Name"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Description"
+          },
+          "estimated_delivery_days": {
+            "title": "Estimated Delivery Days"
           }
         },
         "type": "object",
         "required": [
           "id",
           "part_name",
-          "description"
+          "description",
+          "estimated_delivery_days"
         ],
         "title": "SparePartList",
         "description": "Simplified schema for spare part lists."
@@ -10590,35 +10472,24 @@
       "SparePartRead": {
         "properties": {
           "part_name": {
-            "type": "string",
-            "maxLength": 255,
             "title": "Part Name",
             "description": "Part name"
           },
           "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Description",
             "description": "Part description"
           },
+          "estimated_delivery_days": {
+            "title": "Estimated Delivery Days",
+            "description": "Estimated delivery time in days (1-365)"
+          },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           }
         },
@@ -10631,6 +10502,31 @@
         ],
         "title": "SparePartRead",
         "description": "Schema for reading spare part data."
+      },
+      "SparePartSummary": {
+        "properties": {
+          "id": {
+            "title": "Id"
+          },
+          "part_name": {
+            "title": "Part Name"
+          },
+          "description": {
+            "title": "Description"
+          },
+          "estimated_delivery_days": {
+            "title": "Estimated Delivery Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "part_name",
+          "description",
+          "estimated_delivery_days"
+        ],
+        "title": "SparePartSummary",
+        "description": "Lightweight schema for nested spare part display."
       },
       "SparePartUpdate": {
         "properties": {
@@ -10656,6 +10552,19 @@
               }
             ],
             "title": "Description"
+          },
+          "estimated_delivery_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Delivery Days"
           }
         },
         "type": "object",
@@ -10716,33 +10625,15 @@
       "SupplierList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "name": {
-            "type": "string",
             "title": "Name"
           },
           "contact_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Contact Number"
           },
           "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Email"
           }
         },
@@ -10759,58 +10650,24 @@
       "SupplierRead": {
         "properties": {
           "name": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
             "title": "Name"
           },
           "contact_number": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 20
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Contact Number"
           },
           "email": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "email"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Email"
           },
           "address": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Address"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           }
         },
@@ -10879,23 +10736,98 @@
         "title": "SupplierUpdate",
         "description": "Schema for updating a supplier (all fields optional)."
       },
+      "TaskExecutionInfo": {
+        "properties": {
+          "timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamp"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "files_deleted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files Deleted"
+          },
+          "space_freed_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Space Freed Mb"
+          },
+          "backup_size_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Size Mb"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "TaskExecutionInfo",
+        "description": "Information about a task execution"
+      },
       "Token": {
         "properties": {
           "access_token": {
-            "type": "string",
             "title": "Access Token"
           },
           "refresh_token": {
-            "type": "string",
             "title": "Refresh Token"
           },
           "token_type": {
-            "type": "string",
-            "title": "Token Type",
-            "default": "bearer"
+            "title": "Token Type"
           },
           "expires_in": {
-            "type": "integer",
             "title": "Expires In"
           }
         },
@@ -10958,57 +10890,6 @@
         "title": "UserCreate",
         "description": "Schema for creating a new user."
       },
-      "UserList": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "username": {
-            "type": "string",
-            "title": "Username"
-          },
-          "email": {
-            "type": "string",
-            "title": "Email"
-          },
-          "full_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Full Name"
-          },
-          "is_active": {
-            "type": "boolean",
-            "title": "Is Active"
-          },
-          "is_manager": {
-            "type": "boolean",
-            "title": "Is Manager"
-          },
-          "is_admin": {
-            "type": "boolean",
-            "title": "Is Admin"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "username",
-          "email",
-          "full_name",
-          "is_active",
-          "is_manager",
-          "is_admin"
-        ],
-        "title": "UserList",
-        "description": "Simplified schema for user lists."
-      },
       "UserProfileUpdate": {
         "properties": {
           "email": {
@@ -11055,9 +10936,6 @@
       "UserRead": {
         "properties": {
           "username": {
-            "type": "string",
-            "maxLength": 100,
-            "minLength": 3,
             "title": "Username"
           },
           "email": {
@@ -11066,40 +10944,24 @@
             "title": "Email"
           },
           "full_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Full Name"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "is_active": {
-            "type": "boolean",
             "title": "Is Active"
           },
           "is_manager": {
-            "type": "boolean",
             "title": "Is Manager"
           },
           "is_admin": {
-            "type": "boolean",
             "title": "Is Admin"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           }
         },
@@ -11229,19 +11091,16 @@
       "WatchAttachmentList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Unique identifier for the attachment",
             "examples": [1, 42]
           },
           "watch_id": {
-            "type": "integer",
             "title": "Watch Id",
             "description": "ID of the watch this attachment belongs to",
             "examples": [123, 456]
           },
           "file_name": {
-            "type": "string",
             "title": "File Name",
             "description": "Original filename with extension",
             "examples": [
@@ -11249,14 +11108,6 @@
             ]
           },
           "mime_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Mime Type",
             "description": "MIME type of the file",
             "examples": [
@@ -11264,22 +11115,11 @@
             ]
           },
           "file_size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "File Size Bytes",
             "description": "File size in bytes",
             "examples": [2458624]
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Timestamp when the attachment was uploaded",
             "examples": [
@@ -11318,8 +11158,6 @@
       "WatchAttachmentRead": {
         "properties": {
           "file_name": {
-            "type": "string",
-            "maxLength": 255,
             "title": "File Name",
             "description": "Original filename with extension",
             "examples": [
@@ -11328,15 +11166,6 @@
             ]
           },
           "mime_type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 100
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Mime Type",
             "description": "MIME type of the uploaded file. Supported types: image/jpeg, image/png, image/webp, image/gif, application/pdf",
             "examples": [
@@ -11346,34 +11175,21 @@
             ]
           },
           "file_size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10485760,
-                "minimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "File Size Bytes",
             "description": "File size in bytes. Maximum allowed size is 10,485,760 bytes (10 MB)",
             "examples": [2458624, 512000]
           },
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Unique identifier for the attachment",
             "examples": [1, 42]
           },
           "watch_id": {
-            "type": "integer",
             "title": "Watch Id",
             "description": "ID of the watch this attachment belongs to",
             "examples": [123, 456]
           },
           "storage_path": {
-            "type": "string",
             "title": "Storage Path",
             "description": "Internal storage path (for administrative use)",
             "examples": [
@@ -11381,8 +11197,6 @@
             ]
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Timestamp when the attachment was uploaded",
             "examples": [
@@ -11390,8 +11204,6 @@
             ]
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At",
             "description": "Timestamp when the attachment was last modified",
             "examples": [
@@ -11426,19 +11238,16 @@
       "WatchComplaintAttachmentList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Unique identifier for the attachment",
             "examples": [1, 42]
           },
           "watch_complaint_id": {
-            "type": "integer",
             "title": "Watch Complaint Id",
             "description": "ID of the complaint this attachment belongs to",
             "examples": [789, 101]
           },
           "file_name": {
-            "type": "string",
             "title": "File Name",
             "description": "Original filename with extension",
             "examples": [
@@ -11446,14 +11255,6 @@
             ]
           },
           "mime_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Mime Type",
             "description": "MIME type of the file",
             "examples": [
@@ -11461,22 +11262,11 @@
             ]
           },
           "file_size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "File Size Bytes",
             "description": "File size in bytes",
             "examples": [1048576]
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Timestamp when the attachment was uploaded",
             "examples": [
@@ -11507,8 +11297,6 @@
       "WatchComplaintAttachmentRead": {
         "properties": {
           "file_name": {
-            "type": "string",
-            "maxLength": 255,
             "title": "File Name",
             "description": "Original filename with extension",
             "examples": [
@@ -11517,15 +11305,6 @@
             ]
           },
           "mime_type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 100
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Mime Type",
             "description": "MIME type of the uploaded file. Supported types: image/jpeg, image/png, image/webp, image/gif, application/pdf",
             "examples": [
@@ -11534,34 +11313,21 @@
             ]
           },
           "file_size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10485760,
-                "minimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "File Size Bytes",
             "description": "File size in bytes. Maximum allowed size is 10,485,760 bytes (10 MB)",
             "examples": [1048576, 3145728]
           },
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Unique identifier for the attachment",
             "examples": [1, 42]
           },
           "watch_complaint_id": {
-            "type": "integer",
             "title": "Watch Complaint Id",
             "description": "ID of the complaint this attachment belongs to",
             "examples": [789, 101]
           },
           "storage_path": {
-            "type": "string",
             "title": "Storage Path",
             "description": "Internal storage path (for administrative use)",
             "examples": [
@@ -11569,8 +11335,6 @@
             ]
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Timestamp when the attachment was uploaded",
             "examples": [
@@ -11578,8 +11342,6 @@
             ]
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At",
             "description": "Timestamp when the attachment was last modified",
             "examples": [
@@ -11669,6 +11431,24 @@
             ],
             "title": "Notes",
             "description": "Additional notes"
+          },
+          "indent_required": {
+            "type": "boolean",
+            "title": "Indent Required",
+            "description": "Whether this complaint requires an indent",
+            "default": false
+          },
+          "spare_part_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spare Part Id",
+            "description": "Spare part ID if indent is required"
           }
         },
         "type": "object",
@@ -11682,50 +11462,39 @@
       "WatchComplaintRead": {
         "properties": {
           "watch_id": {
-            "type": "integer",
             "title": "Watch Id",
             "description": "Watch ID"
           },
           "complaint_node_id": {
-            "type": "integer",
             "title": "Complaint Node Id",
             "description": "Complaint node ID"
           },
           "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Notes",
             "description": "Additional notes"
           },
+          "indent_required": {
+            "title": "Indent Required",
+            "description": "Whether this complaint requires an indent"
+          },
+          "spare_part_id": {
+            "title": "Spare Part Id",
+            "description": "Spare part ID if indent is required"
+          },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           },
           "complaint_node": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ComplaintNodeRead"
-              },
-              {
-                "type": "null"
-              }
-            ]
+
+          },
+          "spare_part": {
+
           }
         },
         "type": "object",
@@ -11751,6 +11520,28 @@
               }
             ],
             "title": "Notes"
+          },
+          "indent_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indent Required"
+          },
+          "spare_part_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spare Part Id"
           }
         },
         "type": "object",
@@ -11760,19 +11551,16 @@
       "WatchConditionAttachmentList": {
         "properties": {
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Unique identifier for the attachment",
             "examples": [1, 42]
           },
           "watch_condition_id": {
-            "type": "integer",
             "title": "Watch Condition Id",
             "description": "ID of the condition this attachment belongs to",
             "examples": [234, 567]
           },
           "file_name": {
-            "type": "string",
             "title": "File Name",
             "description": "Original filename with extension",
             "examples": [
@@ -11780,14 +11568,6 @@
             ]
           },
           "mime_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Mime Type",
             "description": "MIME type of the file",
             "examples": [
@@ -11795,22 +11575,11 @@
             ]
           },
           "file_size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "minimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "File Size Bytes",
             "description": "File size in bytes",
             "examples": [2097152]
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Timestamp when the attachment was uploaded",
             "examples": [
@@ -11841,8 +11610,6 @@
       "WatchConditionAttachmentRead": {
         "properties": {
           "file_name": {
-            "type": "string",
-            "maxLength": 255,
             "title": "File Name",
             "description": "Original filename with extension",
             "examples": [
@@ -11851,15 +11618,6 @@
             ]
           },
           "mime_type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 100
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Mime Type",
             "description": "MIME type of the uploaded file. Supported types: image/jpeg, image/png, image/webp, image/gif, application/pdf",
             "examples": [
@@ -11868,34 +11626,21 @@
             ]
           },
           "file_size_bytes": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 10485760,
-                "minimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "File Size Bytes",
             "description": "File size in bytes. Maximum allowed size is 10,485,760 bytes (10 MB)",
             "examples": [2097152, 4194304]
           },
           "id": {
-            "type": "integer",
             "title": "Id",
             "description": "Unique identifier for the attachment",
             "examples": [1, 42]
           },
           "watch_condition_id": {
-            "type": "integer",
             "title": "Watch Condition Id",
             "description": "ID of the condition this attachment belongs to",
             "examples": [234, 567]
           },
           "storage_path": {
-            "type": "string",
             "title": "Storage Path",
             "description": "Internal storage path (for administrative use)",
             "examples": [
@@ -11903,8 +11648,6 @@
             ]
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Timestamp when the attachment was uploaded",
             "examples": [
@@ -11912,8 +11655,6 @@
             ]
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At",
             "description": "Timestamp when the attachment was last modified",
             "examples": [
@@ -12016,50 +11757,28 @@
       "WatchConditionRead": {
         "properties": {
           "watch_id": {
-            "type": "integer",
             "title": "Watch Id",
             "description": "Watch ID"
           },
           "condition_node_id": {
-            "type": "integer",
             "title": "Condition Node Id",
             "description": "Condition node ID"
           },
           "notes": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Notes",
             "description": "Additional notes"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           },
           "condition_node": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ConditionNodeRead"
-              },
-              {
-                "type": "null"
-              }
-            ]
+
           }
         },
         "type": "object",
@@ -12177,138 +11896,38 @@
         "title": "WatchCreate",
         "description": "Schema for creating a new watch."
       },
-      "WatchList": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "job_id": {
-            "type": "integer",
-            "title": "Job Id"
-          },
-          "brand_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Brand Id"
-          },
-          "model_number": {
-            "type": "string",
-            "title": "Model Number"
-          },
-          "watch_serial_number": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Watch Serial Number"
-          },
-          "ucp_rate": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Ucp Rate"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "job_id",
-          "brand_id",
-          "model_number",
-          "watch_serial_number",
-          "ucp_rate"
-        ],
-        "title": "WatchList",
-        "description": "Simplified schema for watch lists."
-      },
       "WatchRead": {
         "properties": {
           "brand_id": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Brand Id",
             "description": "Brand ID"
           },
           "model_number": {
-            "type": "string",
-            "maxLength": 255,
-            "minLength": 1,
             "title": "Model Number"
           },
           "watch_serial_number": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 255
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Watch Serial Number"
           },
           "date_of_purchase": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Date Of Purchase"
           },
           "ucp_rate": {
-            "type": "string",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
             "title": "Ucp Rate",
             "description": "UCP rate"
           },
           "other_remarks": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
             "title": "Other Remarks"
           },
           "id": {
-            "type": "integer",
             "title": "Id"
           },
           "job_id": {
-            "type": "integer",
             "title": "Job Id"
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Created At"
           },
           "updated_at": {
-            "type": "string",
-            "format": "date-time",
             "title": "Updated At"
           }
         },
@@ -12407,6 +12026,50 @@
         "type": "object",
         "title": "WatchUpdate",
         "description": "Schema for updating a watch (all fields optional)."
+      },
+      "WorkerStatusResponse": {
+        "properties": {
+          "scheduler_running": {
+            "type": "boolean",
+            "title": "Scheduler Running"
+          },
+          "next_cleanup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cleanup"
+          },
+          "next_backup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Backup"
+          },
+          "last_cleanup": {
+            "$ref": "#/components/schemas/TaskExecutionInfo"
+          },
+          "last_backup": {
+            "$ref": "#/components/schemas/TaskExecutionInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scheduler_running",
+          "last_cleanup",
+          "last_backup"
+        ],
+        "title": "WorkerStatusResponse",
+        "description": "Response for worker status"
       }
     },
     "securitySchemes": {

@@ -227,4 +227,48 @@ export const jobsService = {
     },
 };
 
+export const systemService = {
+    // Worker Status
+    getWorkerStatus: async () => {
+        const response = await api.get('/api/v1/system/workers/status');
+        return response.data;
+    },
+    
+    // Cleanup Operations
+    previewCleanup: async (retentionDays) => {
+        const response = await api.post('/api/v1/system/cleanup/preview', {
+            retention_days: retentionDays
+        });
+        return response.data;
+    },
+    runCleanup: async (retentionDays) => {
+        const response = await api.post('/api/v1/system/cleanup/run', {
+            retention_days: retentionDays
+        });
+        return response.data;
+    },
+    
+    // Backup Operations
+    createBackup: async (includeAttachments = false) => {
+        const response = await api.post('/api/v1/system/backup/run', {
+            include_attachments: includeAttachments
+        });
+        return response.data;
+    },
+    listBackups: async () => {
+        const response = await api.get('/api/v1/system/backup/list');
+        return response.data;
+    },
+    downloadBackup: async (filename) => {
+        const response = await api.get(`/api/v1/system/backup/download/${filename}`, {
+            responseType: 'blob'
+        });
+        return response;
+    },
+    deleteBackup: async (filename) => {
+        const response = await api.delete(`/api/v1/system/backup/${filename}`);
+        return response.data;
+    },
+};
+
 export default api;

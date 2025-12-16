@@ -17,7 +17,8 @@ import {
     FileBarChart,
     UserCog,
     DollarSign,
-    LogOut
+    LogOut,
+    Server
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, children, isOpen, onToggle, isActive }) => {
@@ -134,8 +135,8 @@ const Sidebar = () => {
                     <SidebarItem icon={FileBarChart} label="Reports" to="/reports" />
                 </div>
 
-                {/* Settings Section (Admin Only) */}
-                {user?.is_admin && (
+                {/* Settings Section (Admin/Manager) */}
+                {(user?.is_admin || user?.is_manager) && (
                     <div>
                         <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Settings</p>
                         <SidebarItem
@@ -144,10 +145,15 @@ const Sidebar = () => {
                             isOpen={isSettingsOpen}
                             onToggle={() => setIsSettingsOpen(!isSettingsOpen)}
                         >
-                            <SidebarItem icon={ClipboardList} label="Service Parameters" to="/settings/service-parameters" />
-                            <SidebarItem icon={DollarSign} label="Pricing Rules" to="/settings/pricing-rules" />
-                            <SidebarItem icon={Package} label="Spare Parts" to="/settings/spare-parts" />
-                            <SidebarItem icon={UserCog} label="Users" to="/settings/users" />
+                            {user?.is_admin && (
+                                <>
+                                    <SidebarItem icon={ClipboardList} label="Service Parameters" to="/settings/service-parameters" />
+                                    <SidebarItem icon={DollarSign} label="Pricing Rules" to="/settings/pricing-rules" />
+                                    <SidebarItem icon={Package} label="Spare Parts" to="/settings/spare-parts" />
+                                    <SidebarItem icon={UserCog} label="Users" to="/settings/users" />
+                                </>
+                            )}
+                            <SidebarItem icon={Server} label="System Administration" to="/settings/system" />
                         </SidebarItem>
                     </div>
                 )}

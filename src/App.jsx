@@ -20,6 +20,7 @@ import ReportsPage from './pages/ReportsPage';
 import PricingRulesPage from './pages/PricingRulesPage';
 import SparePartsPage from './pages/SparePartsPage';
 import UsersPage from './pages/UsersPage';
+import SystemAdministrationPage from './pages/SystemAdministrationPage';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
             <Route path="/settings/pricing-rules" element={<PricingRulesPage />} />
             <Route path="/settings/spare-parts" element={<SparePartsPage />} />
             <Route path="/settings/users" element={<UsersPage />} />
+            <Route path="/settings/system" element={<SystemAdministrationPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             {/* Add other routes here later */}
           </Route>
