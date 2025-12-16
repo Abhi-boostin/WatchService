@@ -152,7 +152,7 @@ const DashboardPage = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <div className="flex flex-col">
-                                                <span className="font-medium">{new Date(job.created_at).toLocaleDateString()}</span>
+                                                <span className="font-medium">{new Date(job.created_at).toLocaleDateString('en-IN')}</span>
                                                 <span className="text-xs text-gray-400">{new Date(job.created_at).toLocaleTimeString()}</span>
                                             </div>
                                         </td>

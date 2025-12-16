@@ -50,7 +50,7 @@ const WatchSelectionModal = ({ isOpen, onClose, watches, onSelect }) => {
                                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                                         <span className="flex items-center gap-1">
                                             <Calendar size={12} />
-                                            Purchased: {watch.date_of_purchase ? new Date(watch.date_of_purchase).toLocaleDateString() : 'N/A'}
+                                            Purchased: {watch.date_of_purchase ? new Date(watch.date_of_purchase).toLocaleDateString('en-IN') : 'N/A'}
                                         </span>
                                     </div>
                                 </div>

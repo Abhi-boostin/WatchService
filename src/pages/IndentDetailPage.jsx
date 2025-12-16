@@ -415,7 +415,7 @@ const IndentDetailPage = () => {
                             <div>
                                 <p className="text-sm text-gray-500">Created</p>
                                 <p className="font-medium text-gray-900">
-                                    {new Date(indent.created_at).toLocaleDateString()}
+                                    {new Date(indent.created_at).toLocaleDateString('en-IN')}
                                 </p>
                             </div>
                         </div>

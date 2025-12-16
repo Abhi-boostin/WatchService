@@ -734,7 +734,7 @@ const JobDetailsPage = () => {
                                 </span>
                             </div>
                             <p className="text-gray-500 mt-1">
-                                Created on {new Date(job.created_at).toLocaleDateString()}
+                                Created on {new Date(job.created_at).toLocaleDateString('en-IN')}
                             </p>
                         </div>
                     </div>
@@ -990,14 +990,14 @@ const JobDetailsPage = () => {
                                     <div className="flex justify-between py-2">
                                         <span className="text-sm text-gray-600">Delivery Date</span>
                                         <span className="font-medium text-gray-900">
-                                            {job.estimated_delivery_date ? new Date(job.estimated_delivery_date).toLocaleDateString() : '-'}
+                                            {job.estimated_delivery_date ? new Date(job.estimated_delivery_date).toLocaleDateString('en-IN') : '-'}
                                         </span>
                                     </div>
                                     {job.original_estimated_delivery_date && job.original_estimated_delivery_date !== job.estimated_delivery_date && (
                                         <div className="flex justify-between py-2">
                                             <span className="text-sm text-gray-500">Original Date</span>
                                             <span className="font-medium text-gray-500 line-through text-sm">
-                                                {new Date(job.original_estimated_delivery_date).toLocaleDateString()}
+                                                {new Date(job.original_estimated_delivery_date).toLocaleDateString('en-IN')}
                                             </span>
                                         </div>
                                     )}
@@ -1063,7 +1063,7 @@ const JobDetailsPage = () => {
                                 <div className="flex justify-between py-2 border-b border-gray-100">
                                     <span className="text-gray-500">Purchase Date</span>
                                     <span className="font-medium text-gray-900">
-                                        {watch.date_of_purchase ? new Date(watch.date_of_purchase).toLocaleDateString() : '-'}
+                                        {watch.date_of_purchase ? new Date(watch.date_of_purchase).toLocaleDateString('en-IN') : '-'}
                                     </span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b border-gray-100">
@@ -1214,7 +1214,7 @@ const JobDetailsPage = () => {
                                         <div className="grid grid-cols-2 gap-2 text-xs">
                                             <div className="flex items-center gap-1 text-gray-500">
                                                 <Calendar size={12} />
-                                                <span>{attachment.uploaded_at ? new Date(attachment.uploaded_at).toLocaleDateString() : '-'}</span>
+                                                <span>{attachment.uploaded_at ? new Date(attachment.uploaded_at).toLocaleDateString('en-IN') : '-'}</span>
                                             </div>
                                             <div className="flex items-center gap-1 text-gray-500">
                                                 <ImageIcon size={12} />
@@ -1326,13 +1326,13 @@ const JobDetailsPage = () => {
                                                 <div>
                                                     <p className="text-xs text-gray-500 mb-1">Created Date</p>
                                                     <p className="font-medium text-gray-900">
-                                                        {indent.created_at ? new Date(indent.created_at).toLocaleDateString() : '-'}
+                                                        {indent.created_at ? new Date(indent.created_at).toLocaleDateString('en-IN') : '-'}
                                                     </p>
                                                 </div>
                                                 <div>
                                                     <p className="text-xs text-gray-500 mb-1">Last Updated</p>
                                                     <p className="font-medium text-gray-900">
-                                                        {indent.updated_at ? new Date(indent.updated_at).toLocaleDateString() : '-'}
+                                                        {indent.updated_at ? new Date(indent.updated_at).toLocaleDateString('en-IN') : '-'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1956,7 +1956,7 @@ const JobDetailsPage = () => {
                                         <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                                             <span className="flex items-center gap-1">
                                                 <Calendar size={14} />
-                                                {selectedImage.uploaded_at ? new Date(selectedImage.uploaded_at).toLocaleDateString() : '-'}
+                                                {selectedImage.uploaded_at ? new Date(selectedImage.uploaded_at).toLocaleDateString('en-IN') : '-'}
                                             </span>
                                             <span className="flex items-center gap-1">
                                                 <ImageIcon size={14} />

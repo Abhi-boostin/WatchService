@@ -312,10 +312,10 @@ const JobListPage = () => {
                                                     </button>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden xl:table-cell">
-                                                    {new Date(job.created_at).toLocaleDateString()}
+                                                    {new Date(job.created_at).toLocaleDateString('en-IN')}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {job.estimated_delivery_date ? new Date(job.estimated_delivery_date).toLocaleDateString() : '-'}
+                                                    {job.estimated_delivery_date ? new Date(job.estimated_delivery_date).toLocaleDateString('en-IN') : '-'}
                                                 </td>
                                                 <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
                                                     <div className="flex items-center justify-end gap-2">
@@ -367,12 +367,12 @@ const JobListPage = () => {
                                         </div>
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Calendar size={16} className="text-gray-400" />
-                                            <span className="text-sm">Created: {new Date(job.created_at).toLocaleDateString()}</span>
+                                            <span className="text-sm">Created: {new Date(job.created_at).toLocaleDateString('en-IN')}</span>
                                         </div>
                                         {job.estimated_delivery_date && (
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <Clock size={16} className="text-gray-400" />
-                                                <span className="text-sm">Due: {new Date(job.estimated_delivery_date).toLocaleDateString()}</span>
+                                                <span className="text-sm">Due: {new Date(job.estimated_delivery_date).toLocaleDateString('en-IN')}</span>
                                             </div>
                                         )}
                                     </div>

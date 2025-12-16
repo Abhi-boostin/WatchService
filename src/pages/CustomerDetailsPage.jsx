@@ -256,7 +256,7 @@ const CustomerDetailsPage = () => {
                             <Calendar size={14} /> Date of Birth
                         </label>
                         <p className="font-medium text-gray-900">
-                            {customer.date_of_birth ? new Date(customer.date_of_birth).toLocaleDateString() : '-'}
+                            {customer.date_of_birth ? new Date(customer.date_of_birth).toLocaleDateString('en-IN') : '-'}
                         </p>
                     </div>
 
@@ -344,7 +344,7 @@ const CustomerDetailsPage = () => {
                                                     {isActive && (
                                                         <span className="text-xs text-gray-500 flex items-center gap-1">
                                                             <Calendar size={12} />
-                                                            Created {new Date(job.created_at).toLocaleDateString()}
+                                                            Created {new Date(job.created_at).toLocaleDateString('en-IN')}
                                                         </span>
                                                     )}
                                                 </div>
@@ -363,7 +363,7 @@ const CustomerDetailsPage = () => {
                                                         <div>
                                                             <p className="text-xs text-gray-500 mb-1">Est. Delivery</p>
                                                             <p className="font-medium text-gray-900">
-                                                                {new Date(job.estimated_delivery_date).toLocaleDateString()}
+                                                                {new Date(job.estimated_delivery_date).toLocaleDateString('en-IN')}
                                                             </p>
                                                         </div>
                                                     )}
@@ -386,13 +386,13 @@ const CustomerDetailsPage = () => {
                                                             {job.completed_at && (
                                                                 <span className="flex items-center gap-1">
                                                                     <Clock size={12} />
-                                                                    Completed: {new Date(job.completed_at).toLocaleDateString()}
+                                                                    Completed: {new Date(job.completed_at).toLocaleDateString('en-IN')}
                                                                 </span>
                                                             )}
                                                             {job.delivered_at && (
                                                                 <span className="flex items-center gap-1">
                                                                     <Clock size={12} />
-                                                                    Delivered: {new Date(job.delivered_at).toLocaleDateString()}
+                                                                    Delivered: {new Date(job.delivered_at).toLocaleDateString('en-IN')}
                                                                 </span>
                                                             )}
                                                         </div>

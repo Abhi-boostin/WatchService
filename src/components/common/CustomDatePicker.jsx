@@ -196,7 +196,7 @@ const CustomDatePicker = ({ label, value, onChange, name, placeholder = "Select 
                 <input
                     type="text"
                     readOnly
-                    value={selectedDate ? selectedDate.toLocaleDateString() : ''}
+                    value={selectedDate ? selectedDate.toLocaleDateString('en-IN') : ''}
                     placeholder={placeholder}
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all outline-none bg-white cursor-pointer"
                 />

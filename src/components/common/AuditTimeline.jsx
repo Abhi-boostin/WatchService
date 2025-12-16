@@ -19,7 +19,7 @@ const AuditTimeline = ({ events, loading, error, currentPage, totalPages, onPage
     const formatTimestamp = (timestamp) => {
         if (!timestamp) return 'Unknown date';
         const date = new Date(timestamp);
-        return date.toLocaleString('en-US', {
+        return date.toLocaleString('en-IN', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',

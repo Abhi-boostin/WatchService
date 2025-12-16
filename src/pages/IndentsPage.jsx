@@ -285,7 +285,7 @@ const IndentsPage = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden xl:table-cell">
-                                                {new Date(indent.created_at).toLocaleDateString()}
+                                                {new Date(indent.created_at).toLocaleDateString('en-IN')}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate hidden lg:table-cell">
                                                 {indent.notes || '-'}
