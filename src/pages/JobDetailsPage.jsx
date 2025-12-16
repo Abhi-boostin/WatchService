@@ -12,6 +12,7 @@ import HierarchicalNodeSelector from '../components/common/HierarchicalNodeSelec
 import AuditTimeline from '../components/common/AuditTimeline';
 import { exportJobPDF } from '../services/pdfService';
 import { getErrorMessage } from '../utils/errorUtils';
+import { calculateDeliveryDate } from '../utils/dateUtils';
 
 const JobDetailsPage = () => {
     const { id } = useParams();
@@ -557,13 +558,35 @@ const JobDetailsPage = () => {
             // Update the job with new pricing
             if (response.data && response.data.estimate) {
                 const estimate = response.data.estimate;
+                
+                // Calculate new delivery date if max_estimated_delivery_days is provided
+                let updatedDeliveryDate = job.estimated_delivery_date;
+                if (estimate.max_estimated_delivery_days != null) {
+                    updatedDeliveryDate = calculateDeliveryDate(estimate.max_estimated_delivery_days);
+                    
+                    // Update the job with the new delivery date via API
+                    try {
+                        await api.patch(`/api/v1/jobs/${id}`, {
+                            estimated_delivery_date: updatedDeliveryDate
+                        });
+                    } catch (patchError) {
+                        console.error("Error updating delivery date:", patchError);
+                        // Continue with pricing update even if delivery date update fails
+                    }
+                }
+                
                 setJob(prev => ({
                     ...prev,
                     estimated_cost: estimate.estimated_total,
                     estimated_parts_cost: estimate.total_parts_cost,
-                    estimated_labour_cost: estimate.total_labour_cost
+                    estimated_labour_cost: estimate.total_labour_cost,
+                    estimated_delivery_date: updatedDeliveryDate
                 }));
-                alert(`Pricing recalculated successfully!\nEstimated Total: ₹${parseFloat(estimate.estimated_total).toFixed(2)}`);
+                
+                const deliveryMessage = estimate.max_estimated_delivery_days != null 
+                    ? `\nDelivery Date: ${new Date(updatedDeliveryDate).toLocaleDateString('en-IN')} (${estimate.max_estimated_delivery_days} days)`
+                    : '';
+                alert(`Pricing recalculated successfully!\nEstimated Total: ₹${parseFloat(estimate.estimated_total).toFixed(2)}${deliveryMessage}`);
             } else {
                 alert("Pricing recalculated successfully!");
             }

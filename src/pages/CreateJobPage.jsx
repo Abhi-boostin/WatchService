@@ -10,6 +10,7 @@ import StepIndicator from '../components/jobs/create/StepIndicator';
 import WatchSelectionModal from '../components/jobs/create/WatchSelectionModal';
 import CustomerAutofillPrompt from '../components/jobs/create/CustomerAutofillPrompt';
 import { getErrorMessage } from '../utils/errorUtils';
+import { calculateDeliveryDate } from '../utils/dateUtils';
 
 const steps = [
     { id: 1, title: 'Customer', icon: User },
@@ -471,14 +472,24 @@ const CreateJobPage = () => {
             setCostBreakdown(estimateData);
 
             if (estimateData && estimateData.estimated_total) {
+                // Calculate delivery date based on max_estimated_delivery_days if available
+                let deliveryDate = prev.issues.estimated_delivery;
+                if (!deliveryDate) {
+                    // If max_estimated_delivery_days is provided and not null, use it
+                    // Otherwise fall back to 30 days
+                    const daysToAdd = estimateData.max_estimated_delivery_days != null 
+                        ? estimateData.max_estimated_delivery_days 
+                        : 30;
+                    deliveryDate = calculateDeliveryDate(daysToAdd);
+                }
+
                 setFormData(prev => ({
                     ...prev,
                     issues: {
                         ...prev.issues,
                         estimated_parts_cost: parseFloat(estimateData.total_parts_cost) || 0,
                         estimated_labour_cost: parseFloat(estimateData.total_labour_cost) || 0,
-                        // Auto-set delivery to 30 days from now if not already set
-                        estimated_delivery: prev.issues.estimated_delivery || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                        estimated_delivery: deliveryDate
                     }
                 }));
             }

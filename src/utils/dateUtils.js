@@ -90,3 +90,22 @@ export const isValidDate = (dateString) => {
   return date instanceof Date && !isNaN(date);
 };
 
+/**
+ * Calculates a delivery date by adding specified number of days to today
+ * @param {number} days - Number of days to add from today
+ * @returns {string} ISO formatted date string (YYYY-MM-DD)
+ * @example
+ * // If today is January 1, 2024
+ * calculateDeliveryDate(5)
+ * // Returns: '2024-01-06'
+ */
+export const calculateDeliveryDate = (days) => {
+  if (!days || days <= 0) {
+    return getTodayISO();
+  }
+  
+  const deliveryDate = new Date();
+  deliveryDate.setDate(deliveryDate.getDate() + days);
+  return formatDateToISO(deliveryDate);
+};
+
