@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar, History } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Save, X, Package, FileText, Truck, Calendar, History, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 import { auditService } from '../services/api';
 import { exportIndentPDF } from '../services/pdfService';
@@ -290,6 +290,14 @@ const IndentDetailPage = () => {
                     <div className="flex gap-2">
                         {!editMode && (
                             <>
+                                <button
+                                    onClick={() => navigate(`/jobs/${indent.job_id}`)}
+                                    className="flex items-center gap-2 px-4 py-2 text-indigo-600 bg-white border border-indigo-200 rounded-xl hover:bg-indigo-50"
+                                    title="View related job"
+                                >
+                                    <ExternalLink size={18} />
+                                    View Job
+                                </button>
                                 {currentUser && (currentUser.is_admin || currentUser.is_manager) && (
                                     <button
                                         onClick={handleOpenAuditModal}
@@ -396,7 +404,13 @@ const IndentDetailPage = () => {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500">Job</p>
-                                <p className="font-medium text-gray-900">{job?.job_number || `Job #${indent.job_id}`}</p>
+                                <button
+                                    onClick={() => navigate(`/jobs/${indent.job_id}`)}
+                                    className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+                                >
+                                    {job?.job_number || `Job #${indent.job_id}`}
+                                    <ExternalLink size={14} />
+                                </button>
                             </div>
                         </div>
                         <div className="flex items-start gap-3">

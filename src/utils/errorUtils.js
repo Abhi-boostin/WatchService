@@ -31,11 +31,6 @@ export const getErrorMessage = (error, fallbackMessage = 'An error occurred. Ple
             : fallbackMessage;
     }
     
-    // Network error
-    if (!error.response) {
-        return 'Network error. Please check your connection.';
-    }
-    
     // Fallback to default message
     return fallbackMessage;
 };

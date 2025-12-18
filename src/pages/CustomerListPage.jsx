@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Phone, Mail, MapPin, Plus, Loader2, Trash2, X, AlertTriangle } from 'lucide-react';
+import { Search, User, Phone, Mail, MapPin, Plus, Loader2, Trash2, X, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import CustomDatePicker from '../components/common/CustomDatePicker';
 import { getErrorMessage } from '../utils/errorUtils';
@@ -10,6 +10,9 @@ const CustomerListPage = () => {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageSize, setPageSize] = useState(20);
 
     // Modal States
     const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -18,25 +21,30 @@ const CustomerListPage = () => {
 
     useEffect(() => {
         fetchCustomers();
-    }, []);
+    }, [page, searchTerm, pageSize]);
 
     const fetchCustomers = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/api/v1/customers?page=1&page_size=50');
+            let query = `/api/v1/customers?page=${page}&page_size=${pageSize}`;
+            if (searchTerm) {
+                query += `&search=${encodeURIComponent(searchTerm)}`;
+            }
+            const response = await api.get(query);
             setCustomers(response.data.items || []);
+            setTotalPages(response.data.pagination?.total_pages || 1);
         } catch (error) {
             console.error("Error fetching customers:", error);
+            setCustomers([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const filteredCustomers = customers.filter(customer =>
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.contact_number.includes(searchTerm) ||
-        (customer.email && customer.email.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const handleSearch = (e) => {
+        setSearchTerm(e.target.value);
+        setPage(1); // Reset to first page on new search
+    };
 
     // Actions
     const openDeleteModal = (customer, e) => {
@@ -122,7 +130,7 @@ const CustomerListPage = () => {
                     type="text"
                     placeholder="Search customers by name, phone, or email..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={handleSearch}
                     className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all bg-white shadow-sm"
                 />
             </div>
@@ -132,58 +140,125 @@ const CustomerListPage = () => {
                 <div className="flex justify-center items-center py-20">
                     <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                 </div>
-            ) : filteredCustomers.length === 0 ? (
+            ) : customers.length === 0 ? (
                 <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                     <User className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-500 text-lg">No customers found</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredCustomers.map((customer) => (
-                        <div
-                            key={customer.id}
-                            onClick={() => navigate(`/customers/${customer.id}`)}
-                            className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group cursor-pointer relative"
-                        >
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-semibold text-lg group-hover:scale-110 transition-transform">
-                                    {customer.name.charAt(0).toUpperCase()}
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={(e) => openDeleteModal(customer, e)}
-                                        className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all touch-manipulation"
-                                        title="Delete Customer"
-                                        aria-label="Delete customer"
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50/50 border-b border-gray-100">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Email</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Location</th>
+                                    <th className="sticky right-0 bg-gray-50/50 px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {customers.map((customer) => (
+                                    <tr
+                                        key={customer.id}
+                                        onClick={() => navigate(`/customers/${customer.id}`)}
+                                        className="hover:bg-gray-50/50 transition-colors group cursor-pointer"
                                     >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            </div>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 font-semibold flex-shrink-0">
+                                                    {customer.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                                                    <div className="text-xs text-gray-500">ID: {customer.id}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                <Phone size={14} className="text-gray-400" />
+                                                <span>{customer.contact_number}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                                            {customer.email ? (
+                                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                    <Mail size={14} className="text-gray-400" />
+                                                    <span className="truncate max-w-xs">{customer.email}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 hidden xl:table-cell">
+                                            {customer.address ? (
+                                                <div className="flex items-start gap-2 text-sm text-gray-600">
+                                                    <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                                    <span className="line-clamp-2">
+                                                        {customer.address}
+                                                        {customer.city && `, ${customer.city}`}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                        <td className="sticky right-0 bg-white group-hover:bg-gray-50/50 px-6 py-4 whitespace-nowrap text-right shadow-[-4px_0_6px_-2px_rgba(0,0,0,0.05)]">
+                                            <button
+                                                onClick={(e) => openDeleteModal(customer, e)}
+                                                className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all touch-manipulation"
+                                                title="Delete Customer"
+                                                aria-label="Delete customer"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">{customer.name}</h3>
-                            <p className="text-sm text-gray-500 mb-4">ID: {customer.id}</p>
-
-                            <div className="space-y-3">
-                                <div className="flex items-center gap-3 text-gray-600">
-                                    <Phone size={16} className="text-gray-400" />
-                                    <span className="text-sm">{customer.contact_number}</span>
-                                </div>
-                                {customer.email && (
-                                    <div className="flex items-center gap-3 text-gray-600">
-                                        <Mail size={16} className="text-gray-400" />
-                                        <span className="text-sm truncate">{customer.email}</span>
-                                    </div>
-                                )}
-                                {customer.address && (
-                                    <div className="flex items-start gap-3 text-gray-600">
-                                        <MapPin size={16} className="text-gray-400 mt-0.5" />
-                                        <span className="text-sm line-clamp-2">{customer.address}, {customer.city}</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+            {/* Pagination */}
+            {!loading && customers.length > 0 && (
+                <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30 mt-6 rounded-xl">
+                    <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-500">
+                            Page {page} of {totalPages}
+                        </span>
+                        <select
+                            value={pageSize}
+                            onChange={(e) => {
+                                setPageSize(Number(e.target.value));
+                                setPage(1);
+                            }}
+                            className="px-2 py-1 rounded border border-gray-200 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        >
+                            <option value={20}>20 per page</option>
+                            <option value={50}>50 per page</option>
+                            <option value={100}>100 per page</option>
+                        </select>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1}
+                            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <button
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages}
+                            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
                 </div>
             )}
 

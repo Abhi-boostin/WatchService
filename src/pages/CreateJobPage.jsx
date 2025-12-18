@@ -473,7 +473,7 @@ const CreateJobPage = () => {
 
             if (estimateData && estimateData.estimated_total) {
                 // Calculate delivery date based on max_estimated_delivery_days if available
-                let deliveryDate = prev.issues.estimated_delivery;
+                let deliveryDate = formData.issues.estimated_delivery;
                 if (!deliveryDate) {
                     // If max_estimated_delivery_days is provided and not null, use it
                     // Otherwise fall back to 30 days
@@ -495,6 +495,7 @@ const CreateJobPage = () => {
             }
 
         } catch (error) {
+            
             console.error("Calculation failed:", error);
             alert(getErrorMessage(error, "Failed to calculate cost. Please try again."));
         } finally {

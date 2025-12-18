@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, FileText, Package, Truck, Calendar, Eye, Filter, X } from 'lucide-react';
+import { Plus, Search, FileText, Package, Truck, Calendar, Eye, Filter, X, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 import { getErrorMessage } from '../utils/errorUtils';
 
@@ -49,7 +49,11 @@ const IndentsPage = () => {
             if (filterSupplierId) url += `&supplier_id=${filterSupplierId}`;
 
             const response = await api.get(url);
-            setIndents(response.data.items || []);
+            // Sort indents by created_at descending (newest first)
+            const sortedIndents = (response.data.items || []).sort((a, b) => 
+                new Date(b.created_at) - new Date(a.created_at)
+            );
+            setIndents(sortedIndents);
             setTotalPages(response.data.pagination?.total_pages || 1);
 
             // Fetch job and supplier details for display
@@ -274,9 +278,17 @@ const IndentsPage = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="text-sm font-medium text-gray-900">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigate(`/jobs/${indent.job_id}`);
+                                                    }}
+                                                    className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+                                                    title="View job details"
+                                                >
                                                     {jobs[indent.job_id]?.job_number || `Job #${indent.job_id}`}
-                                                </span>
+                                                    <ExternalLink size={14} />
+                                                </button>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">

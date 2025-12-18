@@ -137,7 +137,10 @@ const DashboardPage = () => {
                                             <span className="font-mono text-sm font-medium text-gray-900">#{job.job_number || job.id}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">Customer #{job.customer_id}</div>
+                                            <div className="text-sm font-medium text-gray-900">
+                                                {job.customer?.name}
+                                                </div>
+                                                <div className="text-xs text-gray-500">{job.customer?.contact_number}</div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
